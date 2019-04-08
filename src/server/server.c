@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <sys/socket.h>
 #include <netinet/in.h>
 
 static int asp_socket_fd = -1;
@@ -113,14 +114,60 @@ static void close_wave_file(struct wave_file *wf) {
   close(wf->fd);
 }
 
+int runSocket(const int port, const int maxConnect) {
+
+    int socketFd, socketOpt = 1;
+    int newSocket[maxConnect];
+    struct sockaddr_in address;
+    int addrLen = sizeof(address);
+
+    if(socketFd = socket(AF_INET, SOCK_DGRAM, 0)) {
+      perror("Socket creation failure");
+      return -1;
+    };
+
+    if(setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT,
+        &socketOpt, sizeof(socketOpt))) {
+      perror("Socket Options failure");
+      return -1;
+    }
+
+    address.sin_family = AF_INET;
+    address.sin_addr.s_addr = INADDR_ANY;
+    address.sin_port = htons(port);
+
+    if(bind(socketFd, (struct sockaddr*) &address, sizeof(address)) < 0) {
+        perror("Binding operation failure");
+        return -1;
+    }
+
+    if(listen(socketFd, maxConnect) < 0) {
+        perror("Listen failure");
+        return -1;
+    }
+
+    if(newSocket[0] = accept(socketFd, (struct sockaddr*) &address,
+        (socklen_t*)&addrLen) < 0) {
+        perror("Accept failure");
+        return -1;
+    }
+
+    return 0;
+}
+
 int main(int argc, char **argv) {
 
   /* TODO: Parse command-line options */
   char *filename;
 
+
   /* Open the WAVE file */
   if (open_wave_file(&wf, filename) < 0) {
     return -1;
+  }
+
+  if(runSocket(8000, 3) < 0) {
+      return -1;
   }
 
   /* TODO: Read and send audio data */
