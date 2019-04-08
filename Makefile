@@ -4,8 +4,7 @@
 #
 
 CC            ?= gcc 
-WARNINGS       = -Wall -Wextra -pedantic
-# OTHERS         = 
+WARNINGS       = -g -Wall -Wextra -pedantic
 
 BASESRCDIR     = src
 
@@ -30,7 +29,7 @@ CLIENTOBJS     = $(addprefix $(CLIENTOBJDIR),$(CLIENTOBJFILES))
 LIBDIR         = lib
 IDIRS          = -I$(BASESRCDIR)
 
-CFLAGS         = $(IDIRS) -std=c99 $(WARNINGS) -lm -lasound
+CFLAGS         = $(IDIRS) -std=gnu99 $(WARNINGS) -lm -lasound
 
 SERVEREXEC     = server
 CLIENTEXEC     = client
