@@ -21,6 +21,10 @@ WHITE  = [1;37m
 
 xoutofy = $(or $(eval PROCESSED := $(PROCESSED) .),$(info $(WHITE)[$(YELLOW)$(words $(PROCESSED))$(WHITE)/$(YELLOW)$(words $(SRCS) . . )$(WHITE)] $1$(CLEAR)))
 
+.PHONY: server client git
+
+all: server client
+
 server: $(SERVEROBJECTS)
 	@$(call xoutofy,$(GREEN)Linking $@)
 	$(CC) $(SERVEROBJECTS) -o $@ $(CFLAGS)
@@ -45,4 +49,4 @@ git:
 
 c: clean
 
-.PHONY: clean
+.PHONY: c clean

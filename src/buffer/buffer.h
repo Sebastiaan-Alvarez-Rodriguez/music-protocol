@@ -1,6 +1,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+// Intel from: 
+// https://embeddedartistry.com/blog/2017/4/6/circular-buffers-in-cc
+// https://en.wikipedia.org/wiki/Circular_buffer
+
 /** 
  * Simple ring buffer implementation
  * Allows for a 'sliding window' in buffer
@@ -15,18 +19,31 @@ typedef struct {
     bool full;
 } buffer;
 
-bool buf_init(buffer* buf, size_t max_elems, size_t elem_size);
+// Make a buffer with (elem_max+1)*elem_size bytes
+// Returns true on success, false otherwise
+bool buf_init(buffer* const buf, size_t max_elems, size_t elem_size);
 
-void buf_reset(buffer* buf);
+// Resets a buffer (making it empty)
+void buf_reset(buffer* const buf);
 
-bool buf_add(buffer* buf, void* data, bool override);
+// Adds an element 'data' to the buffer (data must have correct size!)
+// Returns true on success, false otherwise
+bool buf_add(buffer* const buf, void* data, bool override);
 
-void* buf_read(buffer* buf, size_t index);
+//Returns pointer to element at specified index
+void* buf_read(const buffer* const buf, size_t index);
 
-size_t buf_used_size(const buffer* buf);
+// Returns amount of elements used in buffer
+size_t buf_used_size(const buffer* const buf);
 
-size_t buf_free_size(const buffer* buf);
+// Returns current amount of free space
+size_t buf_free_size(const buffer* const buf);
 
-bool buf_empty(const buffer* buf);
+// Returns true if buffer is empty, false otherwise
+bool buf_empty(const buffer* const buf);
 
-bool buf_full(const buffer* buf);
+// Returns true if buffer is full, false otherwise
+bool buf_full(const buffer* const buf);
+
+// Returns maximum capacity buffer can hold
+size_t buf_capacity(const buffer* const buf);

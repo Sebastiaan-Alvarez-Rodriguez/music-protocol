@@ -8,7 +8,7 @@
 #include "buffer.h"
 
 // Helper func: Move pointer 1 place right, wrapping around end of buffer
-void buf_move_ptr_right(buffer* buf) {
+void buf_move_ptr_right(buffer* const buf) {
     if(buf->full)
         buf->start = (buf->start + 1) % buf->max;
     buf->end = (buf->end + 1) % buf->max;
@@ -17,15 +17,12 @@ void buf_move_ptr_right(buffer* buf) {
 }
 // Helper func: Move pointer 1 place left, wrapping around end of buffer
 // Expects to be called for use: removing one item
-void buf_move_ptr_left(buffer* buf) {
+void buf_move_ptr_left(buffer* const buf) {
     buf->full = false;
     buf->end = (buf->end + 1) % buf->max;
 }
 
-// Make a buffer with (elem_max+1)*elem_size bytes
-// +1 is to make full/empty checks really easy
-// Returns true on success, false otherwise
-bool buf_init(buffer* buf, size_t max_elems, size_t elem_size) {
+bool buf_init(buffer* const buf, size_t max_elems, size_t elem_size) {
     void* loc = malloc(max_elems*elem_size);
     if (loc == NULL || errno == ENOMEM)
         return false;
@@ -36,15 +33,14 @@ bool buf_init(buffer* buf, size_t max_elems, size_t elem_size) {
     return true;
 }
 
-void buf_reset(buffer* buf) {
+void buf_reset(buffer* const buf) {
     buf->start = 0;
     buf->end = 0;
     buf->full = false;
 }
 
-// Adds an element 'data' to the buffer (data must have correct size!)
-// Returns true on success, false otherwise
-bool buf_add(buffer* buf, void* data, bool override) {
+
+bool buf_add(buffer* const buf, void* data, bool override) {
     if (!override && buf->full)
         return false;
     void* location = (uint8_t*)buf->data + buf->end * buf->elem_size;
@@ -53,8 +49,7 @@ bool buf_add(buffer* buf, void* data, bool override) {
     return true;
 }
 
-//Returns pointer to element at specified index
-void* buf_read(buffer* buf, size_t index) {
+void* buf_read(const buffer* const buf, size_t index) {
     size_t index_to_move = index % buf_used_size(buf);
     if (buf->start+index_to_move < buf->max) {
         uint8_t* start = (uint8_t*)buf->data + buf->start * buf->elem_size;
@@ -66,8 +61,7 @@ void* buf_read(buffer* buf, size_t index) {
     }
 }
 
-// Returns amount of elements used in buffer
-size_t buf_used_size(const buffer* buf) {
+size_t buf_used_size(const buffer* const buf) {
     if (buf->full)
         return buf->max;
     if (buf->start < buf->end)
@@ -76,22 +70,18 @@ size_t buf_used_size(const buffer* buf) {
         return buf->start - buf->end;
 }
 
-// Returns current amount of free space
-size_t buf_free_size(const buffer* buf) {
+size_t buf_free_size(const buffer* const buf) {
     return buf->max - buf_used_size(buf);
 }
 
-// Returns true if buffer is empty, false otherwise
-bool buf_empty(const buffer* buf) {
+bool buf_empty(const buffer* const buf) {
     return !buf->full && buf->start == buf->end;
 }
 
-// Returns true if buffer is full, false otherwise
-bool buf_full(const buffer* buf) {
+bool buf_full(const buffer* const buf) {
     return buf->full;
 }
 
-// Returns maximum capacity buffer can hold
-size_t buf_capacity(const buffer* buf){
+size_t buf_capacity(const buffer* const buf) {
     return buf->max;
 }
