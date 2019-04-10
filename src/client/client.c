@@ -22,6 +22,20 @@
 /* 1 Frame = Stereo 16 bit = 32 bit = 4kbit */
 #define FRAME_SIZE 4
 
+int setupSocket() {
+    int socketFd;
+    struct sockaddr_in server;
+
+    if((socketFd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        perror("Socket Creation");
+        return -1;
+    }
+
+    server.sin_family = AF_INET;
+
+    return socketFd;
+}
+
 int main(int argc, char **argv) {
   int i = 0;
   int buffer_size = 1024;
@@ -37,6 +51,7 @@ int main(int argc, char **argv) {
 
 
   /* TODO: Parse command-line options */
+
 
 
   /* TODO: Set up network connection */

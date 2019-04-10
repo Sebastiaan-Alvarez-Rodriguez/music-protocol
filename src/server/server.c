@@ -20,6 +20,8 @@
 
 #include <getopt.h>
 
+#define MAX_SOCKET_CONNECTION 3
+
 static int asp_socket_fd = -1;
 
 bool debug = false;
@@ -121,49 +123,72 @@ static void close_wave_file(struct wave_file *wf) {
     close(wf->fd);
 }
 
-int runSocket(const int port, const int maxConnect) {
+/* Setup sockets for listening on given port*/
+int setupSocket(const int port, const int maxConnect) {
+    int socketFd;
     int socketOpt = 1;
-    int newSocket[maxConnect];
-    struct sockaddr_in address;
-    int addrLen = sizeof(address);
-
-
-    puts("Socket Creation");
-    if((asp_socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
-      perror("Socket creation failure");
+    struct sockaddr_in server;
+    //Create a socket and store the fd
+    if((socketFd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+      perror("Socket creation");
       return -1;
     };
-
-    puts("Socket Options");
-    if(setsockopt(asp_socket_fd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT,
+    //Make socket reusable
+    if(setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT,
         &socketOpt, sizeof(socketOpt))) {
-      perror("Socket Options failure");
+      perror("Socket Options");
       return -1;
     }
-
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(port);
-
-    puts("Socket Binding");
-    if(bind(asp_socket_fd, (struct sockaddr*) &address, sizeof(address)) < 0) {
-        perror("Binding operation failure");
+    //Zero byte server variable
+    bzero((char *) &server, sizeof(server));
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(port);
+    // Bind the socket to the server address
+    if(bind(socketFd, (struct sockaddr*) &server, sizeof(server)) < 0) {
+        perror("Socket Binding");
         return -1;
     }
 
-    puts("Socket Listening");
-    if(listen(asp_socket_fd, maxConnect) < 0) {
-        perror("Listen failure");
+    // Set socket in listen mode
+    if(listen(socketFd, maxConnect) < 0) {
+        perror("Socket Listen");
         return -1;
     }
 
-    puts("Socket Accepting");
-    if((newSocket[0] = accept(asp_socket_fd, (struct sockaddr*) &address,
-        (socklen_t*)&addrLen)) < 0) {
+    printf("Socket has port %hu\n", ntohs(server.sin_port));
+
+    return socketFd;
+}
+
+/* Runs a server that listens on given port for connections*/
+int runServer(const int port) {
+    int serverFd, clientFd;
+    struct sockaddr_in client;
+    unsigned clientLen;
+
+    if((serverFd = setupSocket(port, MAX_SOCKET_CONNECTION)) < 0) {
+        return -1;
+    }
+
+    clientLen = sizeof(client);
+
+    // Wait until connection is requested from client
+    if((clientFd = accept(serverFd, (struct sockaddr*) &client,
+        (socklen_t*)&clientLen)) < 0) {
         perror("Accept failure");
         return -1;
     }
 
+    if(clientLen != sizeof(client)) {
+        fputs(stderr, "Client not the same after accept");
+        return -1;
+    }
+
+    printf("Client IP: %s\n", inet_ntoa(client.sin_addr));
+    printf("Client Port: %hu\n", ntohs(client.sin_port));
+
+    close(clientFd);
     return 0;
 }
 
@@ -224,7 +249,9 @@ int main(int argc, char **argv) {
     puts("Opened the wave file");
 
     /* TODO: Read and send audio data */
-    if(runSocket(8000, 3) < 0) {
+
+    /* Start sockets and wait for connections*/
+    if(runServer(8000) < 0) {
         return -1;
     }
 
