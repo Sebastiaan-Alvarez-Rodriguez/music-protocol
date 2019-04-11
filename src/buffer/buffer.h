@@ -47,3 +47,5 @@ bool buf_full(const buffer* const buf);
 
 // Returns maximum capacity buffer can hold
 size_t buf_capacity(const buffer* const buf);
+
+void buf_free(const buffer* buf);

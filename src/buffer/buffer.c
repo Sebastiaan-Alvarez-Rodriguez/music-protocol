@@ -85,3 +85,7 @@ bool buf_full(const buffer* const buf) {
 size_t buf_capacity(const buffer* const buf) {
     return buf->max;
 }
+
+void buf_free(const buffer* buf) {
+    free(buf->data);
+}

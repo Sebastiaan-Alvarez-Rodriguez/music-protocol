@@ -152,6 +152,7 @@ void buffertest(void) {
     printf("Used size: %li\n", used);
     for (size_t i = 0; i < used; i++)
         printf("Read index: %li, %i\n", i, *(int*)buf_read(&buf, i));
+    buf_free(&buf);
 }
 
 int main(int argc, char **argv) {
