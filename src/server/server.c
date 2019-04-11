@@ -17,10 +17,12 @@
 
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <getopt.h>
 
 #define MAX_SOCKET_CONNECTION 3
+#define BIND_PORT 1235
 
 static int asp_socket_fd = -1;
 
@@ -124,7 +126,7 @@ static void close_wave_file(struct wave_file *wf) {
 }
 
 /* Setup sockets for listening on given port*/
-int setupSocket(const int port, const int maxConnect) {
+int setupSocket(const unsigned short port, const unsigned maxConnect) {
     int socketFd;
     int socketOpt = 1;
     struct sockaddr_in server;
@@ -144,6 +146,7 @@ int setupSocket(const int port, const int maxConnect) {
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = INADDR_ANY;
     server.sin_port = htons(port);
+
     // Bind the socket to the server address
     if(bind(socketFd, (struct sockaddr*) &server, sizeof(server)) < 0) {
         perror("Socket Binding");
@@ -161,34 +164,82 @@ int setupSocket(const int port, const int maxConnect) {
     return socketFd;
 }
 
-/* Runs a server that listens on given port for connections*/
-int runServer(const int port) {
-    int serverFd, clientFd;
+// Accepts connections from a client to the server
+// If no connections are made then the server waits during
+// accept function.
+int acceptFromClient(const unsigned serverFd) {
+    int clientFd;
     struct sockaddr_in client;
-    unsigned clientLen;
+    unsigned clientLen = sizeof(client);
 
-    if((serverFd = setupSocket(port, MAX_SOCKET_CONNECTION)) < 0) {
-        return -1;
-    }
-
-    clientLen = sizeof(client);
-
-    // Wait until connection is requested from client
     if((clientFd = accept(serverFd, (struct sockaddr*) &client,
-        (socklen_t*)&clientLen)) < 0) {
+        &clientLen)) < 0) {
         perror("Accept failure");
         return -1;
     }
 
     if(clientLen != sizeof(client)) {
-        fputs(stderr, "Client not the same after accept");
+        fputs(stderr, "Accept overwrote sockaddr_in struct");
         return -1;
     }
 
     printf("Client IP: %s\n", inet_ntoa(client.sin_addr));
     printf("Client Port: %hu\n", ntohs(client.sin_port));
 
-    close(clientFd);
+    return clientFd;
+}
+
+//TODO Replace with udp packet.
+//Reads from the client file descriptor
+int readFromClient(const unsigned clientFd) {
+    puts("Read from client");
+    int readRet = 0;
+    char buff[256];
+    bzero(buff, sizeof(buff));
+    if((readRet = read(clientFd, buff, 256)) < 0) {
+        perror("read");
+        return -1;
+    }
+    puts(buff);
+    return readRet;
+}
+
+//TODO remove for packets
+#define MSG "Hello from server"
+
+//TODO Replace with udp packet.
+// Writes to the client file descriptor.
+int writeToClient(const unsigned clientFd) {
+    printf("Writing: %s to server\n", MSG);
+    int writeRet = 0;
+    if((writeRet = write(clientFd, MSG, sizeof(MSG))) < 0) {
+        perror("write");
+        return -1;
+    }
+    return writeRet;
+}
+
+/* Runs a server that listens on given port for connections*/
+int runServer(const int port) {
+    int serverFd;
+    if((serverFd = setupSocket(port, MAX_SOCKET_CONNECTION)) < 0) {
+        return -1;
+    }
+
+    while(true) {
+        int clientFd;
+        if((clientFd = acceptFromClient(serverFd)) < 0) {
+            return -1;
+        }
+
+        readFromClient(clientFd);
+        if(writeToClient(clientFd) < 0) {
+            return -1;
+        }
+
+        close(clientFd);
+    }
+    close(serverFd);
     return 0;
 }
 
@@ -251,7 +302,7 @@ int main(int argc, char **argv) {
     /* TODO: Read and send audio data */
 
     /* Start sockets and wait for connections*/
-    if(runServer(8000) < 0) {
+    if(runServer(BIND_PORT) < 0) {
         return -1;
     }
 
