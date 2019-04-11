@@ -1,69 +1,52 @@
-#
-# Makefile for final project Computer Graphics
-# Sebastiaan Alvarez Rodriguez
-#
+CC      ?= gcc
+SRC      = src
+OBJS     = obj
 
-CC            ?= gcc 
-WARNINGS       = -g -Wall -Wextra -pedantic
+WARNINGS = -Wall -Wextra -pedantic -g
+IDIRS    = -I$(SRC)
+LDIRS    =  -lm -lasound
+CFLAGS   = $(IDIRS) -std=gnu99 $(WARNINGS) $(LDIRS)
 
-BASESRCDIR     = src
+find = $(shell find $1 -type f ! -name 'server.c' ! -name 'client.c' -name $2 -print 2>/dev/null)
 
-SERVERSRCDIR   = $(BASESRCDIR)/server
-SERVERSRCFILES = $(notdir $(shell find $(SERVERSRCDIR)/*.c))
-SERVERSRCS     = $(addprefix $(SERVERSRCDIR),$(SERVERSRCFILES))
+SRCS := $(call find, $(SRC)/, "*.c")
+SERVEROBJECTS := $(SRCS:%.c=$(OBJS)/%.o) $(OBJS)/$(SRC)/server/server.o
+CLIENTOBJECTS := $(SRCS:%.c=$(OBJS)/%.o) $(OBJS)/$(SRC)/client/client.o
 
-CLIENTSRCDIR   = $(BASESRCDIR)/client
-CLIENTSRCFILES = $(notdir $(shell find $(CLIENTSRCDIR)/*.c))
-CLIENTSRCS     = $(addprefix $(CLIENTSRCDIR),$(CLIENTSRCFILES))
+CLEAR  = [0m
+CYAN   = [1;36m
+GREEN  = [1;32m
+YELLOW = [1;33m
+WHITE  = [1;37m
 
-BASEOBJDIR     = obj
+xoutofy = $(or $(eval PROCESSED := $(PROCESSED) .),$(info $(WHITE)[$(YELLOW)$(words $(PROCESSED))$(WHITE)/$(YELLOW)$(words $(SRCS) . . )$(WHITE)] $1$(CLEAR)))
 
-SERVEROBJDIR   = $(BASEOBJDIR)/server/
-SERVEROBJFILES = $(SERVERSRCFILES:.c=.o)
-SERVEROBJS     = $(addprefix $(SERVEROBJDIR),$(SERVEROBJFILES))
-
-CLIENTOBJDIR   = $(BASEOBJDIR)/client/
-CLIENTOBJFILES = $(CLIENTSRCFILES:.c=.o)
-CLIENTOBJS     = $(addprefix $(CLIENTOBJDIR),$(CLIENTOBJFILES))
-
-LIBDIR         = lib
-IDIRS          = -I$(BASESRCDIR)
-
-CFLAGS         = $(IDIRS) -std=gnu99 $(WARNINGS) -lm -lasound
-
-SERVEREXEC     = server
-CLIENTEXEC     = client
-MAKEFLAGS      = -j
-
-.PHONY: all server client clean
+.PHONY: server client git
 
 all: server client
 
-server: $(SERVEROBJS) 
-	$(CC) $(SERVEROBJS) -o $(SERVEREXEC) $(CFLAGS)
+server: $(SERVEROBJECTS)
+	@$(call xoutofy,$(GREEN)Linking $@)
+	$(CC) $(SERVEROBJECTS) -o $@ $(CFLAGS)
 
-client: $(CLIENTOBJS)
-	$(CC) $(CLIENTOBJS) -o $(CLIENTEXEC) $(CFLAGS)
+client: $(CLIENTOBJECTS)
+	@$(call xoutofy,$(GREEN)Linking $@)
+	$(CC) $(CLIENTOBJECTS) -o $@ $(CFLAGS)
+
+$(OBJS)/%.o: %.c
+	@$(call xoutofy,$(CYAN)Compiling $<)
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -o $@ -c $<
 
 clean:
-	rm -rf $(BASEOBJDIR) $(SERVEREXEC) $(CLIENTEXEC)
+	@echo Cleaning...
+	@rm -rf $(OBJS) server client
 
-$(SERVEROBJDIR)%.o: $(SERVERSRCDIR)/%.c
-	$(CC) $(CFLAGS) -o $@ -c $<
-
-$(CLIENTOBJDIR)%.o: $(CLIENTSRCDIR)/%.c
-	$(CC) $(CFLAGS) -o $@ -c $<
-
-$(SERVEROBJS): | $(SERVEROBJDIR)
-
-$(SERVEROBJDIR):
-	mkdir -p $(SERVEROBJDIR)
-
-$(CLIENTOBJS): | $(CLIENTOBJDIR)
-
-$(CLIENTOBJDIR):
-	mkdir -p $(CLIENTOBJDIR)
+git:
+	git add *
+	git commit
+	git push
 
 c: clean
 
-.PHONY: c
+.PHONY: c clean

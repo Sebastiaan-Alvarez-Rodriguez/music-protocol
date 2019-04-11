@@ -4,18 +4,16 @@
  */
 #include "asp.h"
 
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <alsa/asoundlib.h>
-
-
-#define BIND_PORT 1235
-#define SERVER_IP "127.0.0.1"
-
+#include <getopt.h>
 
 #define NUM_CHANNELS 2
 #define SAMPLE_RATE 44100
@@ -83,112 +81,160 @@ int connectServer(const unsigned short port, const char* address) {
         return -1;
     }
 
-    close(socketFd);
-    return 0;
+    return socketFd;
 }
 
 
+bool debug = false;
+
+static void showHelp(const char *prog_name) {
+    puts(prog_name);
+    puts("[-q quality] [-i IP address] [-p port] [-d debug] [-h]");
+    puts("");
+    puts("-b buffersize Give a buffer size in KB");
+    puts("-q quality    Number within [1-5] (higher means more quality)");
+    puts("-i IP address IP address of server");
+    puts("-p port       Specify which port the client should connect to");
+    puts("-d debug      If set, prints debug information");
+    puts("-h            Shows this dialog");
+}
+
 int main(int argc, char **argv) {
-  int i = 0;
-  int buffer_size = 1024;
-  int bind_port = BIND_PORT;
-  int fd;
-  int ret;
-  unsigned int blocksize = 0;
+    const char* const prog_name = argv[0];
+    unsigned quality = 5;
+    unsigned buffer_size = 1024;
+    unsigned short bind_port = 1235;
+    char* server_address = "127.0.0.1";
 
-  uint8_t *recvbuffer;
-  uint8_t *recv_ptr;
-  uint8_t *playbuffer;
-  uint8_t *play_ptr;
+    char c;
+    while ((c = getopt(argc, argv, "b:q:i:p:dh")) != -1){
+        switch (c) {
+            case 'b':
+                if (*optarg >= '1') {
+                    buffer_size = atoi(optarg);
+                    printf("Buffersize set to %i\n", buffer_size);
+                } else {
+                    puts("Provide a bufferspace >= 1");
+                    return -1;
+                }
+                break;
+            case 'q':
+                if (*optarg >= '1' && *optarg <= '5') {
+                    quality = atoi(optarg);
+                    printf("Quality set to %i\n", quality);
+                }
+                else {
+                    puts("Your quality level must be within [1-5]");
+                    return -1;
+                }
+                break;
+            case 'i':
+
+            case 'p':
+                bind_port = (unsigned short) atoi(optarg);
+                break;
+            case 'd':
+                debug = true;
+                break;
+            case 'h':
+            default:
+                showHelp(prog_name);
+                return 0;
+        }
+    }
+    argc -= optind;
+    argv += optind;
 
 
-  /* TODO: Parse command-line options */
+    int fd;
 
-  if(connectServer(bind_port, SERVER_IP) < 0) {
+    /* TODO: Set up network connection */
+
+  if((fd = connectServer(bind_port, server_address)) < 0) {
       return -1;
   }
+    /* Open audio device */
+    snd_pcm_t *snd_handle;
 
-  /* TODO: Set up network connection */
+    int err = snd_pcm_open(&snd_handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
 
-  /* Open audio device */
-  snd_pcm_t *snd_handle;
-
-  int err = snd_pcm_open(&snd_handle, "default", SND_PCM_STREAM_PLAYBACK, 0);
-
-  if (err < 0) {
-    fprintf(stderr, "couldnt open audio device: %s\n", snd_strerror(err));
-    return -1;
-  }
-
-  /* Configure parameters of PCM output */
-  err = snd_pcm_set_params(snd_handle,
-                           SND_PCM_FORMAT_S16_LE,
-                           SND_PCM_ACCESS_RW_INTERLEAVED,
-                           NUM_CHANNELS,
-                           SAMPLE_RATE,
-                           0,          /* Allow software resampling */
-                           500000);    /* 0.5 seconds latency */
-  if (err < 0) {
-    printf("couldnt configure audio device: %s\n", snd_strerror(err));
-    return -1;
-  }
-
-  /* set up buffers/queues */
-  recvbuffer = malloc(BLOCK_SIZE);
-  playbuffer = malloc(BLOCK_SIZE);
-
-  /* TODO: fill the buffer */
-
-  /* Play */
-  printf("playing...\n");
-
-  i = 0;
-  recv_ptr = recvbuffer;
-  while (1) {
-    if (i <= 0) {
-      /* TODO: get sample */
-
-      play_ptr = playbuffer;
-      i = blocksize;
+    if (err < 0) {
+        fprintf(stderr, "couldnt open audio device: %s\n", snd_strerror(err));
+        return -1;
     }
 
-    /* write frames to ALSA */
-    snd_pcm_sframes_t frames = snd_pcm_writei(snd_handle, play_ptr,
-                                              (blocksize - ((int) play_ptr - (int) playbuffer)) / FRAME_SIZE);
-
-    /* Check for errors */
-    ret = 0;
-    if (frames < 0)
-      ret = snd_pcm_recover(snd_handle, frames, 0);
-    if (ret < 0) {
-      fprintf(stderr, "ERROR: Failed writing audio with snd_pcm_writei(): %i\n", ret);
-      exit(EXIT_FAILURE);
-    }
-    if (frames > 0 && frames < (blocksize - ((int) play_ptr - (int) playbuffer)) / FRAME_SIZE)
-      printf("Short write (expected %i, wrote %li)\n",
-             (int) (blocksize - ((int) play_ptr - (int) playbuffer)) / FRAME_SIZE, frames);
-
-    /* advance pointers accordingly */
-    if (frames > 0) {
-      play_ptr += frames * FRAME_SIZE;
-      i -= frames * FRAME_SIZE;
+    /* Configure parameters of PCM output */
+    err = snd_pcm_set_params(snd_handle,
+         SND_PCM_FORMAT_S16_LE,
+         SND_PCM_ACCESS_RW_INTERLEAVED,
+         NUM_CHANNELS,
+         SAMPLE_RATE,
+         0,              // Allow software resampling
+         500000);        // 0.5 seconds latency
+    if (err < 0) {
+        printf("couldnt configure audio device: %s\n", snd_strerror(err));
+        return -1;
     }
 
-    if ((int) play_ptr - (int) playbuffer == blocksize)
-      i = 0;
+    /* set up buffers/queues */
+    uint8_t* recvbuffer = malloc(BLOCK_SIZE);
+    uint8_t* playbuffer = malloc(BLOCK_SIZE);
+
+    /* TODO: fill the buffer */
+
+    /* Play */
+    printf("playing...\n");
+
+    int i = 0;
+    unsigned blocksize = 0;
+    uint8_t* play_ptr;
+    uint8_t* recv_ptr = recvbuffer;
+    while (true) {
+        if (i <= 0) {
+            /* TODO: get sample */
+
+            play_ptr = playbuffer;
+            i = blocksize;
+        }
+
+        /* write frames to ALSA */
+        snd_pcm_sframes_t frames = snd_pcm_writei(snd_handle, play_ptr, (blocksize - (*play_ptr - *playbuffer)) / FRAME_SIZE);
+
+        /* Check for errors */
+        int ret = 0;
+        if (frames < 0)
+            ret = snd_pcm_recover(snd_handle, frames, 0);
+        if (ret < 0) {
+            fprintf(stderr, "ERROR: Failed writing audio with snd_pcm_writei(): %i\n", ret);
+            exit(EXIT_FAILURE);
+        }
+        if (frames > 0 && frames < (blocksize - (*play_ptr - *playbuffer)) / FRAME_SIZE)
+            printf("Short write (expected %i, wrote %li)\n",
+                         (int) (blocksize - (*play_ptr - *playbuffer)) / FRAME_SIZE, frames);
+
+        /* advance pointers accordingly */
+        if (frames > 0) {
+            play_ptr += frames * FRAME_SIZE;
+            i -= frames * FRAME_SIZE;
+        }
+
+        if ((unsigned)(*play_ptr - *playbuffer) == blocksize)
+            i = 0;
 
 
-    /* TODO: try to receive a block from the server? */
+        /* TODO: try to receive a block from the server? */
 
-  }
+    }
 
-  /* clean up */
-  free(recvbuffer);
-  free(playbuffer);
+    close(fd);
+    
+    /* clean up */
+    free(recvbuffer);
+    free(playbuffer);
 
-  snd_pcm_drain(snd_handle);
-  snd_pcm_hw_free(snd_handle);
-  snd_pcm_close(snd_handle);
+    snd_pcm_drain(snd_handle);
+    snd_pcm_hw_free(snd_handle);
+    snd_pcm_close(snd_handle);
 
-  return 0;
+    return 0;
 }
