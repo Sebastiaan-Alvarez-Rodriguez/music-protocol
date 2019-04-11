@@ -12,10 +12,6 @@
 
 #include <alsa/asoundlib.h>
 
-
-#define BIND_PORT 1235
-
-
 #define NUM_CHANNELS 2
 #define SAMPLE_RATE 44100
 #define BLOCK_SIZE 1024
