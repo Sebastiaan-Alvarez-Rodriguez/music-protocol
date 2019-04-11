@@ -120,15 +120,6 @@ static void close_wave_file(struct wave_file* wf) {
     close(wf->fd);
 }
 
-static void showHelp(const char *progName) {
-    puts(progName);
-    puts("[-q quality] [-d debug] [-f soundfile]");
-    puts("");
-    puts("-q quality    Number within [1-5] (higher means more quality)");
-    puts("-d debug      If set, prints debug information");
-    puts("-f soundfile  The soundfile to send to the client");
-}
-
 void buffertest(void) {
     size_t bufsize = 4;
     buffer buf;
