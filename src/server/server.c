@@ -41,13 +41,13 @@ struct wave_header {
 
 /* wave file handle */
 struct wave_file {
-        struct wave_header *wh;
+        struct wave_header* wh;
         int fd;
 
-        void *data;
+        void* data;
         uint32_t data_size;
 
-        uint8_t *samples;
+        uint8_t* samples;
         uint32_t payload_size;
 };
 
@@ -115,7 +115,7 @@ static int open_wave_file(struct wave_file *wf, const char *filename) {
 }
 
 /* close the wave file/clean up */
-static void close_wave_file(struct wave_file *wf) {
+static void close_wave_file(struct wave_file* wf) {
     munmap(wf->data, wf->data_size);
     close(wf->fd);
 }
@@ -155,17 +155,31 @@ void buffertest(void) {
     buf_free(&buf);
 }
 
-int main(int argc, char **argv) {
-    unsigned quality;
+static void showHelp(const char *prog_name) {
+    puts(prog_name);
+    puts("[-q quality] [-f soundfile] [-p port] [-d debug] [-h]");
+    puts("");
+    puts("-q quality    Number within [1-5] (higher means more quality)");
+    puts("-f soundfile  The soundfile to send to the client");
+    puts("-p port       Specify which port the client should connect to");
+    puts("-d debug      If set, prints debug information");
+    puts("-h            Shows this dialog");
+}
 
+int main(int argc, char** argv) {
+    unsigned quality = 5;
+    unsigned short bind_port = 1235;
     char c;
-    char *filename = NULL;
-    const char *progName = argv[0];
+    char* filename = NULL;
+    const char* const prog_name = argv[0];
     while ((c = getopt(argc, argv, "f:q:dh")) != -1){
         switch (c) {
             case 'f':
                 if (optarg != NULL)
                     filename = optarg;
+                break;
+            case 'p':
+                bind_port = (unsigned short) atoi(optarg);
                 break;
             case 'q':
                 if (*optarg >= '1' && *optarg <= '5') {
@@ -182,8 +196,8 @@ int main(int argc, char **argv) {
                 break;
             case 'h':
             default:
-                showHelp(progName);
-                return -1;
+                showHelp(prog_name);
+                return 0;
         }
     }
     argc -= optind;
