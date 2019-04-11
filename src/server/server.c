@@ -193,7 +193,7 @@ int acceptFromClient(const unsigned serverFd) {
 //Reads from the client file descriptor
 int readFromClient(const unsigned clientFd) {
     puts("Read from client");
-    int readRet = 0;
+    int readRet;
     char buff[256];
     bzero(buff, sizeof(buff));
     if((readRet = read(clientFd, buff, 256)) < 0) {
@@ -210,8 +210,8 @@ int readFromClient(const unsigned clientFd) {
 //TODO Replace with udp packet.
 // Writes to the client file descriptor.
 int writeToClient(const unsigned clientFd) {
-    printf("Writing: %s to server\n", MSG);
-    int writeRet = 0;
+    printf("Writing: %s to client\n", MSG);
+    int writeRet;
     if((writeRet = write(clientFd, MSG, sizeof(MSG))) < 0) {
         perror("write");
         return -1;
@@ -232,11 +232,19 @@ int runServer(const int port) {
             return -1;
         }
 
-        readFromClient(clientFd);
-        if(writeToClient(clientFd) < 0) {
-            return -1;
+        int connectionAlive;
+        do {
+            if((connectionAlive = readFromClient(clientFd)) < 0) {
+                return -1;
+            }
+            if(connectionAlive) {
+                if(writeToClient(clientFd) < 0) {
+                    return -1;
+                }
+            }
         }
-
+        while (connectionAlive);
+        puts("Connection closed");
         close(clientFd);
     }
     close(serverFd);
