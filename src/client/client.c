@@ -84,8 +84,7 @@ int main(int argc, char **argv) {
     }
 
     /* write frames to ALSA */
-    snd_pcm_sframes_t frames = snd_pcm_writei(snd_handle, play_ptr,
-                                              (blocksize - ((int) play_ptr - (int) playbuffer)) / FRAME_SIZE);
+    snd_pcm_sframes_t frames = snd_pcm_writei(snd_handle, play_ptr, (blocksize - ((int) play_ptr - (int) playbuffer)) / FRAME_SIZE);
 
     /* Check for errors */
     ret = 0;
