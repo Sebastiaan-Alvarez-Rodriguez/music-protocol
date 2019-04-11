@@ -25,29 +25,29 @@ bool debug = false;
 
 
 struct wave_header {
-        char riff_id[4];
-        uint32_t size;
-        char wave_id[4];
-        char format_id[4];
-        uint32_t format_size;
-        uint16_t w_format_tag;
-        uint16_t n_channels;
-        uint32_t n_samples_per_sec;
-        uint32_t n_avg_bytes_per_sec;
-        uint16_t n_block_align;
-        uint16_t w_bits_per_sample;
+    char riff_id[4];
+    uint32_t size;
+    char wave_id[4];
+    char format_id[4];
+    uint32_t format_size;
+    uint16_t w_format_tag;
+    uint16_t n_channels;
+    uint32_t n_samples_per_sec;
+    uint32_t n_avg_bytes_per_sec;
+    uint16_t n_block_align;
+    uint16_t w_bits_per_sample;
 };
 
 /* wave file handle */
 struct wave_file {
-        struct wave_header *wh;
-        int fd;
+    struct wave_header *wh;
+    int fd;
 
-        void *data;
-        uint32_t data_size;
+    void *data;
+    uint32_t data_size;
 
-        uint8_t *samples;
-        uint32_t payload_size;
+    uint8_t *samples;
+    uint32_t payload_size;
 };
 
 static struct wave_file wf = {0,};
@@ -100,17 +100,14 @@ static int open_wave_file(struct wave_file *wf, const char *filename) {
     } while (strncmp(p, "data", 4) && (uint32_t) (((void *) p) - wf->data) < statbuf.st_size);
 
     if (wf->wh->w_bits_per_sample != 16) {
-        fprintf(stderr, "can't play sample with bitsize %d\n",
-                        wf->wh->w_bits_per_sample);
+        fprintf(stderr, "can't play sample with bitsize %d\n", wf->wh->w_bits_per_sample);
         return -1;
     }
 
     playlength = (float) *size / (wf->wh->n_channels * wf->wh->n_samples_per_sec * wf->wh->w_bits_per_sample / 8);
 
-    printf("file %s, mode %s, samplerate %lu, time %.1f sec\n",
-                 filename, wf->wh->n_channels == 2 ? "Stereo" : "Mono",
-                 wf->wh->n_samples_per_sec, playlength);
-
+    printf("file %s, mode %s, ", filename, wf->wh->n_channels==2?"Stereo":"Mono");
+    printf("samplerate %lu, time %.1f sec\n",wf->wh->n_samples_per_sec, playlength);
     return 0;
 }
 
