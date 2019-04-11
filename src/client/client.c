@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <alsa/asoundlib.h>
 #include <getopt.h>
@@ -19,6 +20,70 @@
 #define BLOCK_SIZE 1024
 /* 1 Frame = Stereo 16 bit = 32 bit = 4kbit */
 #define FRAME_SIZE 4
+
+#define MSG "Hello from client"
+
+//TODO replace string buffer with udp packet
+// Writes a buffer to the server.
+int writeToServer(const unsigned socketFd) {
+    printf("Sending message: %s to server\n", MSG);
+    if(write(socketFd, MSG, sizeof(MSG)) < 0) {
+        perror("write");
+        return -1;
+    }
+    return 0;
+}
+
+//TODO replace string buffer with udp packet.
+// Reads a buffer from the server.
+int readFromServer(const unsigned socketFd) {
+    puts("Reading from server");
+    char buff[256];
+    bzero(buff, sizeof(buff));
+    if(read(socketFd, buff, sizeof(buff)) < 0) {
+        return -1;
+    }
+    puts(buff);
+    return 0;
+}
+
+// Sets up sockets to connect to a server at given
+// address and port.
+int connectServer(const unsigned short port, const char* address) {
+    int socketFd;
+    struct sockaddr_in server;
+
+    if((socketFd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
+        perror("Socket Creation");
+        return -1;
+    }
+
+    int serverLen = sizeof(server);
+    bzero(&server, serverLen);
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+
+    if(inet_aton(address, &server.sin_addr) == 0) {
+        perror("Function inet_aton");
+        return -1;
+    }
+
+    if(connect(socketFd, (struct sockaddr *)&server, serverLen)) {
+        perror("Server Connect");
+        return -1;
+    }
+
+    if(writeToServer(socketFd) < 0) {
+        return -1;
+    }
+
+    if(readFromServer(socketFd) < 0) {
+        return -1;
+    }
+
+    return socketFd;
+}
+
 
 bool debug = false;
 
@@ -85,6 +150,9 @@ int main(int argc, char **argv) {
 
     /* TODO: Set up network connection */
 
+  if((fd = connectServer(bind_port, server_address)) < 0) {
+      return -1;
+  }
     /* Open audio device */
     snd_pcm_t *snd_handle;
 
@@ -158,6 +226,8 @@ int main(int argc, char **argv) {
 
     }
 
+    close(fd);
+    
     /* clean up */
     free(recvbuffer);
     free(playbuffer);
