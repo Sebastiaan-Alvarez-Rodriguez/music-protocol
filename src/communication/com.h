@@ -15,12 +15,17 @@ typedef struct {
     int flags;
 } com_t;
 
+// Initialize a com-struct (except udp_packet)
+void init_com(com_t* const com, unsigned sockfd, int flags);
+
 // Send a udp_packet to destined client
 // Returns true on success, false otherwise (should check errno)
-bool sendcom(const com_t* const com);
+bool send_com(const com_t* const com);
 
 // Receive a udp_packet from server
 // Returns true on success, false otherwise (checksum fail or malloc fail)
-bool receivecom(com_t* const com);
+bool receive_com(com_t* const com);
 
+// Free a given com_t structure
+void free_com(const com_t* const com);
 #endif

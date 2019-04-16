@@ -65,6 +65,11 @@ static uint16_t buf_get_checksum(const void* const buf) {
 }
 
 
+void init_com(com_t* const com, unsigned sockfd, int flags) {
+    com->sockfd = sockfd;
+    com->flags = flags;
+}
+
 bool sendcom(const com_t* const com) {
     void* buf = NULL;
     size_t size;
@@ -98,4 +103,9 @@ bool receivecom(com_t* const com) {
     
     com->udp_packet = udp_packet;
     return true;
+}
+
+void free_com(const com_t* const com) {
+    free(com->udp_packet->packet);
+    free(com->udp_packet);
 }
