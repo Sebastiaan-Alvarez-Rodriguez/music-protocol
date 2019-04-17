@@ -126,21 +126,21 @@ static void close_wave_file(struct wave_file* wf) {
 }
 
 /* Setup sockets for listening on given port*/
-int setupSocket(const unsigned short port, const unsigned maxConnect) {
+int setupSocket(const unsigned short port) {
     int socketFd;
     int socketOpt = 1;
     struct sockaddr_in server;
     //Create a socket and store the fd
-    if((socketFd = socket(AF_INET, SOCK_STREAM, 0)) == 0) {
+    if((socketFd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
       perror("Socket creation");
       return -1;
     };
-    //Make socket reusable
-    if(setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT,
-        &socketOpt, sizeof(socketOpt))) {
-      perror("Socket Options");
-      return -1;
-    }
+    // //Make socket reusable
+    // if(setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT,
+    //     &socketOpt, sizeof(socketOpt))) {
+    //   perror("Socket Options");
+    //   return -1;
+    // }
     //Zero byte server variable
     bzero((char *) &server, sizeof(server));
     server.sin_family = AF_INET;
@@ -148,55 +148,24 @@ int setupSocket(const unsigned short port, const unsigned maxConnect) {
     server.sin_port = htons(port);
 
     // Bind the socket to the server address
-    if(bind(socketFd, (struct sockaddr*) &server, sizeof(server)) < 0) {
+    if(bind(socketFd, (const struct sockaddr*) &server, sizeof(server)) < 0) {
         perror("Socket Binding");
         return -1;
     }
 
-    // Set socket in listen mode
-    if(listen(socketFd, maxConnect) < 0) {
-        perror("Socket Listen");
-        return -1;
-    }
-
     printf("Socket has port %hu\n", ntohs(server.sin_port));
-
     return socketFd;
 }
 
-// Accepts connections from a client to the server
-// If no connections are made then the server waits during
-// accept function.
-int acceptFromClient(const unsigned serverFd) {
-    int clientFd;
-    struct sockaddr_in client;
-    unsigned clientLen = sizeof(client);
-
-    if((clientFd = accept(serverFd, (struct sockaddr*) &client,
-        &clientLen)) < 0) {
-        perror("Accept failure");
-        return -1;
-    }
-
-    if(clientLen != sizeof(client)) {
-        fputs(stderr, "Accept overwrote sockaddr_in struct");
-        return -1;
-    }
-
-    printf("Client IP: %s\n", inet_ntoa(client.sin_addr));
-    printf("Client Port: %hu\n", ntohs(client.sin_port));
-
-    return clientFd;
-}
-
 //TODO Replace with udp packet.
-//Reads from the client file descriptor
-int readFromClient(const unsigned clientFd) {
+//Reads from the socket file descriptor
+//Waits at recvfrom until a connection is made from a client 
+int readFromClient(const unsigned sockfd, struct sockaddr* client, socklen_t* len) {
     puts("Read from client");
     int readRet;
     char buff[256];
     bzero(buff, sizeof(buff));
-    if((readRet = read(clientFd, buff, 256)) < 0) {
+    if((readRet = recvfrom(sockfd, buff, 256, MSG_WAITALL, client, len)) < 0) {
         perror("read");
         return -1;
     }
@@ -209,10 +178,10 @@ int readFromClient(const unsigned clientFd) {
 
 //TODO Replace with udp packet.
 // Writes to the client file descriptor.
-int writeToClient(const unsigned clientFd) {
+int writeToClient(const unsigned sockfd, const struct sockaddr* client, socklen_t len) {
     printf("Writing: %s to client\n", MSG);
     int writeRet;
-    if((writeRet = write(clientFd, MSG, sizeof(MSG))) < 0) {
+    if((writeRet = sendto(sockfd, MSG, sizeof(MSG), MSG_CONFIRM, client, len)) < 0) {
         perror("write");
         return -1;
     }
@@ -221,34 +190,27 @@ int writeToClient(const unsigned clientFd) {
 
 /* Runs a server that listens on given port for connections*/
 int runServer(const int port) {
-    int serverFd;
-    if((serverFd = setupSocket(port, MAX_SOCKET_CONNECTION)) < 0) {
+    int sockfd;
+    if((sockfd = setupSocket(port)) < 0) {
         return -1;
     }
 
     while(true) {
-        int clientFd;
-        if((clientFd = acceptFromClient(serverFd)) < 0) {
+
+        struct sockaddr_in client;
+        bzero(&client, sizeof(client));
+        int len = sizeof(client);
+        if(readFromClient(sockfd, (struct sockaddr*) &client, (socklen_t*) &len) < 0) {
             return -1;
         }
-
-        int connectionAlive;
-        do {
-            if((connectionAlive = readFromClient(clientFd)) < 0) {
-                return -1;
-            }
-            if(connectionAlive) {
-                if(writeToClient(clientFd) < 0) {
-                    return -1;
-                }
-            }
+        puts("Sending message");
+        if(writeToClient(sockfd, (const struct sockaddr*) &client, len) < 0) {
+            return -1;
         }
-        while (connectionAlive);
         puts("Connection closed");
-        close(clientFd);
     }
-    close(serverFd);
-    return 0;
+
+    return sockfd;
 }
 
 void buffertest(void) {
@@ -328,7 +290,7 @@ int main(int argc, char** argv) {
     buffertest();
 
     if (!filename) {
-        puts("Please specify a file to open with -f <name>");
+        puts("  Please specify a file to open with -f <name>");
         return -1;
     }
 
@@ -339,11 +301,15 @@ int main(int argc, char** argv) {
 
     /* TODO: Read and send audio data */
 
+    int sockfd;
     /* Start sockets and wait for connections*/
-    if(runServer(BIND_PORT) < 0) {
+    if((sockfd = runServer(bind_port)) < 0) {
         return -1;
     }
 
+    /*TODO send stuff to client*/
+
+    close(sockfd);
     /* Clean up */
     close_wave_file(&wf);
 
