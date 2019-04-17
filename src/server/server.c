@@ -16,9 +16,14 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <getopt.h>
+
+#define MAX_SOCKET_CONNECTION 3
+#define BIND_PORT 1235
 
 static int asp_socket_fd = -1;
 
@@ -120,6 +125,94 @@ static void close_wave_file(struct wave_file* wf) {
     close(wf->fd);
 }
 
+/* Setup sockets for listening on given port*/
+int setupSocket(const unsigned short port) {
+    int socketFd;
+    int socketOpt = 1;
+    struct sockaddr_in server;
+    //Create a socket and store the fd
+    if((socketFd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+      perror("Socket creation");
+      return -1;
+    };
+    // //Make socket reusable
+    // if(setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT,
+    //     &socketOpt, sizeof(socketOpt))) {
+    //   perror("Socket Options");
+    //   return -1;
+    // }
+    //Zero byte server variable
+    bzero((char *) &server, sizeof(server));
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons(port);
+
+    // Bind the socket to the server address
+    if(bind(socketFd, (const struct sockaddr*) &server, sizeof(server)) < 0) {
+        perror("Socket Binding");
+        return -1;
+    }
+
+    printf("Socket has port %hu\n", ntohs(server.sin_port));
+    return socketFd;
+}
+
+//TODO Replace with udp packet.
+//Reads from the socket file descriptor
+//Waits at recvfrom until a connection is made from a client 
+int readFromClient(const unsigned sockfd, struct sockaddr* client, socklen_t* len) {
+    puts("Read from client");
+    int readRet;
+    char buff[256];
+    bzero(buff, sizeof(buff));
+    if((readRet = recvfrom(sockfd, buff, 256, MSG_WAITALL, client, len)) < 0) {
+        perror("read");
+        return -1;
+    }
+    puts(buff);
+    return readRet;
+}
+
+//TODO remove for packets
+#define MSG "Hello from server"
+
+//TODO Replace with udp packet.
+// Writes to the client file descriptor.
+int writeToClient(const unsigned sockfd, const struct sockaddr* client, socklen_t len) {
+    printf("Writing: %s to client\n", MSG);
+    int writeRet;
+    if((writeRet = sendto(sockfd, MSG, sizeof(MSG), MSG_CONFIRM, client, len)) < 0) {
+        perror("write");
+        return -1;
+    }
+    return writeRet;
+}
+
+/* Runs a server that listens on given port for connections*/
+int runServer(const int port) {
+    int sockfd;
+    if((sockfd = setupSocket(port)) < 0) {
+        return -1;
+    }
+
+    while(true) {
+
+        struct sockaddr_in client;
+        bzero(&client, sizeof(client));
+        int len = sizeof(client);
+        if(readFromClient(sockfd, (struct sockaddr*) &client, (socklen_t*) &len) < 0) {
+            return -1;
+        }
+        puts("Sending message");
+        if(writeToClient(sockfd, (const struct sockaddr*) &client, len) < 0) {
+            return -1;
+        }
+        puts("Connection closed");
+    }
+
+    return sockfd;
+}
+
 void buffertest(void) {
     size_t bufsize = 4;
     buffer buf;
@@ -197,7 +290,7 @@ int main(int argc, char** argv) {
     buffertest();
 
     if (!filename) {
-        puts("Please specify a file to open with -f <name>");
+        puts("  Please specify a file to open with -f <name>");
         return -1;
     }
 
@@ -208,6 +301,15 @@ int main(int argc, char** argv) {
 
     /* TODO: Read and send audio data */
 
+    int sockfd;
+    /* Start sockets and wait for connections*/
+    if((sockfd = runServer(bind_port)) < 0) {
+        return -1;
+    }
+
+    /*TODO send stuff to client*/
+
+    close(sockfd);
     /* Clean up */
     close_wave_file(&wf);
 

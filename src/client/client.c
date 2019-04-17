@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include <alsa/asoundlib.h>
 #include <getopt.h>
@@ -19,6 +20,37 @@
 #define BLOCK_SIZE 1024
 /* 1 Frame = Stereo 16 bit = 32 bit = 4kbit */
 #define FRAME_SIZE 4
+
+#define MSG "Hello from client"
+
+// Sets up sockets to connect to a server at given
+// address and port.
+int connectServer(const unsigned short port, const char* address, struct sockaddr_in* out) {
+    int socketFd;
+    struct sockaddr_in server;
+
+    if((socketFd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+        perror("Socket Creation");
+        return -1;
+    }
+
+    int serverLen = sizeof(server);
+    bzero(&server, serverLen);
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+
+    if(inet_aton(address, &server.sin_addr) == 0) {
+        perror("Function inet_aton");
+        return -1;
+    }
+
+    out->sin_addr.s_addr = server.sin_addr.s_addr;
+    out->sin_family = server.sin_family;
+    out->sin_port = server.sin_port;
+
+    return socketFd;
+}
+
 
 bool debug = false;
 
@@ -82,8 +114,20 @@ int main(int argc, char **argv) {
 
 
     int fd;
+    struct sockaddr_in server;
+    if((fd = connectServer(bind_port, server_address, &server)) < 0) {
+        return -1;
+    }
+    int len = sizeof(server);
+    sendto(fd, MSG, sizeof(MSG), MSG_CONFIRM, (const struct sockaddr*) &server, sizeof(server));
 
-    /* TODO: Set up network connection */
+    puts("sent");
+
+    char buffer[1024];
+    int n;
+    n = recvfrom(fd, (char*)buffer, 1024, MSG_WAITALL, (struct sockaddr*) &server, &len);
+    buffer[n] = '\0';
+    puts(buffer);
 
     /* Open audio device */
     snd_pcm_t *snd_handle;
@@ -157,6 +201,8 @@ int main(int argc, char **argv) {
         /* TODO: try to receive a block from the server? */
 
     }
+
+    close(fd);
 
     /* clean up */
     free(recvbuffer);
