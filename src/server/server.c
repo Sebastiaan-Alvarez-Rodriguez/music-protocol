@@ -22,6 +22,8 @@
 
 #include <getopt.h>
 
+#include "com.h"
+
 #define MAX_SOCKET_CONNECTION 3
 #define BIND_PORT 1235
 
@@ -135,12 +137,7 @@ int setupSocket(const unsigned short port) {
       perror("Socket creation");
       return -1;
     };
-    // //Make socket reusable
-    // if(setsockopt(socketFd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT,
-    //     &socketOpt, sizeof(socketOpt))) {
-    //   perror("Socket Options");
-    //   return -1;
-    // }
+
     //Zero byte server variable
     bzero((char *) &server, sizeof(server));
     server.sin_family = AF_INET;
@@ -159,10 +156,10 @@ int setupSocket(const unsigned short port) {
 
 //TODO Replace with udp packet.
 //Reads from the socket file descriptor
-//Waits at recvfrom until a connection is made from a client 
+//Waits at recvfrom until a connection is made from a client
 int readFromClient(const unsigned sockfd, struct sockaddr* client, socklen_t* len) {
     puts("Read from client");
-    int readRet;
+    int readRet = -1;
     char buff[256];
     bzero(buff, sizeof(buff));
     if((readRet = recvfrom(sockfd, buff, 256, MSG_WAITALL, client, len)) < 0) {
@@ -177,10 +174,11 @@ int readFromClient(const unsigned sockfd, struct sockaddr* client, socklen_t* le
 #define MSG "Hello from server"
 
 //TODO Replace with udp packet.
-// Writes to the client file descriptor.
+// Writes to the socket file descriptor.
+// Should only write when a connection is made
 int writeToClient(const unsigned sockfd, const struct sockaddr* client, socklen_t len) {
     printf("Writing: %s to client\n", MSG);
-    int writeRet;
+    int writeRet = -1;
     if((writeRet = sendto(sockfd, MSG, sizeof(MSG), MSG_CONFIRM, client, len)) < 0) {
         perror("write");
         return -1;
@@ -308,6 +306,10 @@ int main(int argc, char** argv) {
     }
 
     /*TODO send stuff to client*/
+
+    com_t comm;
+
+
 
     close(sockfd);
     /* Clean up */

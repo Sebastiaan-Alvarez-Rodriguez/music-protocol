@@ -5,7 +5,10 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/types.h>
+
 #include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 
 #include "communication/packets/udp.h"
 
@@ -13,10 +16,12 @@ typedef struct {
     unsigned sockfd;
     udp_t* udp_packet;
     int flags;
+    struct sockaddr* address;
+    socklen_t addr_len;
 } com_t;
 
 // Initialize a com-struct (except udp_packet)
-void init_com(com_t* const com, unsigned sockfd, int flags);
+void init_com(com_t* const com, unsigned sockfd, int flags, struct sockaddr* const address, socklen_t addr_len);
 
 // Send a udp_packet to destined client
 // Returns true on success, false otherwise (should check errno)

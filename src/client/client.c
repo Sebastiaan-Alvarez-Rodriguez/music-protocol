@@ -15,6 +15,8 @@
 #include <alsa/asoundlib.h>
 #include <getopt.h>
 
+#include "com.h"
+
 #define NUM_CHANNELS 2
 #define SAMPLE_RATE 44100
 #define BLOCK_SIZE 1024
@@ -119,15 +121,18 @@ int main(int argc, char **argv) {
         return -1;
     }
     int len = sizeof(server);
-    sendto(fd, MSG, sizeof(MSG), MSG_CONFIRM, (const struct sockaddr*) &server, sizeof(server));
 
-    puts("sent");
+    com_t comm;
 
-    char buffer[1024];
-    int n;
-    n = recvfrom(fd, (char*)buffer, 1024, MSG_WAITALL, (struct sockaddr*) &server, &len);
-    buffer[n] = '\0';
-    puts(buffer);
+    init_com(&comm, fd, 0, &server, len);
+
+    char hello[256] = "hello from client";
+
+    // comm.udp_packet->packet->data = hello;
+    // comm.udp_packet->packet->size = strlen(hello);
+
+    // send_com(&comm);
+
 
     /* Open audio device */
     snd_pcm_t *snd_handle;
@@ -201,7 +206,7 @@ int main(int argc, char **argv) {
         /* TODO: try to receive a block from the server? */
 
     }
-
+    free_com(&comm);
     close(fd);
 
     /* clean up */

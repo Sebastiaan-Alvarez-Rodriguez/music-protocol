@@ -3,7 +3,7 @@ SRC      = src
 OBJS     = obj
 
 WARNINGS = -Wall -Wextra -pedantic -g
-IDIRS    = -I$(SRC)
+IDIRS    = -I$(SRC) -I$(SRC)/communication
 LDIRS    =  -lm -lasound
 CFLAGS   = $(IDIRS) -std=gnu99 $(WARNINGS) $(LDIRS)
 

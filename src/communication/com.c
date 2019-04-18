@@ -10,7 +10,7 @@
 
 
 //Raw buffer convention:
-// 0 15 - 16    31 - 32+sizeof(data)-1   
+// 0 15 - 16    31 - 32+sizeof(data)-1
 // size - checksum - data
 // Total buffer size is always 16*2 + data length, and divisible by 16
 
@@ -24,7 +24,7 @@ static bool convert_send(void* buf, size_t* const size, const udp_t* const udp_p
 
     *size = sizeof(uint16_t)*2+udp_packet->packet->size;
     buf = malloc(*size);
-    
+
     if (buf == NULL || errno == ENOMEM)
         return false;
 
@@ -64,43 +64,41 @@ static uint16_t buf_get_checksum(const void* const buf) {
     return *pointer;
 }
 
-
-void init_com(com_t* const com, unsigned sockfd, int flags) {
+void init_com(com_t* const com, unsigned sockfd, int flags, struct sockaddr* const address, socklen_t addr_len) {
     com->sockfd = sockfd;
     com->flags = flags;
+    com->address = address;
+    com->addr_len = addr_len;
 }
 
-bool sendcom(const com_t* const com) {
+bool send_com(const com_t* const com) {
     void* buf = NULL;
     size_t size;
 
     if (!convert_send(buf, &size, com->udp_packet))
         return false;
 
-    // TODO:Andrew
-    // return sendto(com->sockfd, buf, size, com->flags,???,???) >= 0;
+    return sendto(com->sockfd, buf, size, com->flags, com->address, com->addr_len) >= 0;
 }
 
-bool receivecom(com_t* const com) {
+bool receive_com(com_t* const com) {
     void* size_checksum_buf = malloc(sizeof(uint16_t)*2);
     if (size_checksum_buf == NULL || errno == ENOMEM)
         return false;
 
     //Get size and checksum
-    //TODO:Andrew
-    // recvfrom(com->sockfd, size_checksum_buf, sizeof(uint16_t)*2, com->flags, ???, ???);
+    recvfrom(com->sockfd, size_checksum_buf, sizeof(uint16_t)*2, com->flags, com->address, &com->addr_len);
     uint16_t size = *(uint16_t*) size_checksum_buf;
     uint16_t checksum = buf_get_checksum(size_checksum_buf);
     free(size_checksum_buf);
 
     //Get data
     void* data_buf = malloc(size);
-    //TODO:Andrew
-    // recvfrom(com->sockfd, data_buf, sizeof(size), com->flags, ???, ???);
+    recvfrom(com->sockfd, data_buf, sizeof(size), com->flags, com->address, &com->addr_len);
 
     udp_t* udp_packet = malloc(sizeof(udp_t));
     convert_recv(udp_packet, data_buf, size, checksum);
-    
+
     com->udp_packet = udp_packet;
     return true;
 }
