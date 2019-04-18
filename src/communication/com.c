@@ -1,4 +1,5 @@
 #include <errno.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
@@ -60,9 +61,11 @@ void init_com(com_t* const com, unsigned sockfd, int flags, struct sockaddr* con
 }
 
 bool send_com(const com_t* const com) {
-    if (com->udp_packet->packet->size % 16 != 0)
+    if (com->udp_packet->packet->size % 16 != 0) {
+        fprintf(stderr, "size = %u\n", com->udp_packet->packet->size);
         errno = EINVAL;
         return false;
+    }
 
     size_t size = sizeof(uint16_t) * 2 + com->udp_packet->packet->size;
     void* buf = malloc(size);
@@ -92,7 +95,10 @@ bool receive_com(com_t* const com) {
 
     //Get data
     void* data_buf = malloc(size);
-    recvfrom(com->sockfd, data_buf, sizeof(size), com->flags, com->address, &com->addr_len);
+    if(recvfrom(com->sockfd, data_buf, sizeof(size), com->flags, com->address, &com->addr_len) < 0) {
+        perror("recvfrom");
+        return false;
+    }
 
     convert_recv(com->udp_packet, data_buf, size, checksum);
     free(data_buf);

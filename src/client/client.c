@@ -124,14 +124,18 @@ int main(int argc, char **argv) {
 
     com_t comm;
 
-    init_com(&comm, fd, 0, (struct sockaddr*) &server, len);
+    init_com(&comm, fd, MSG_CONFIRM, (struct sockaddr*) &server, len);
 
-    char hello[256] = "hello from client";
+    char hello[16] = "hello from clie";
+    hello[16] = '\0';
 
-    // comm.udp_packet->packet->data = hello;
-    // comm.udp_packet->packet->size = strlen(hello);
+    comm.udp_packet->packet->data = hello;
+    comm.udp_packet->packet->size = sizeof(hello);
 
-    // send_com(&comm);
+    if(!send_com(&comm)) {
+        perror("send_com");
+        return -1;
+    }
 
 
     /* Open audio device */

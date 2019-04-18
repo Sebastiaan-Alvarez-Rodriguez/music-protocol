@@ -154,38 +154,6 @@ int setupSocket(const unsigned short port) {
     return socketFd;
 }
 
-//TODO Replace with udp packet.
-//Reads from the socket file descriptor
-//Waits at recvfrom until a connection is made from a client
-int readFromClient(const unsigned sockfd, struct sockaddr* client, socklen_t* len) {
-    puts("Read from client");
-    int readRet = -1;
-    char buff[256];
-    bzero(buff, sizeof(buff));
-    if((readRet = recvfrom(sockfd, buff, 256, MSG_WAITALL, client, len)) < 0) {
-        perror("read");
-        return -1;
-    }
-    puts(buff);
-    return readRet;
-}
-
-//TODO remove for packets
-#define MSG "Hello from server"
-
-//TODO Replace with udp packet.
-// Writes to the socket file descriptor.
-// Should only write when a connection is made
-int writeToClient(const unsigned sockfd, const struct sockaddr* client, socklen_t len) {
-    printf("Writing: %s to client\n", MSG);
-    int writeRet = -1;
-    if((writeRet = sendto(sockfd, MSG, sizeof(MSG), MSG_CONFIRM, client, len)) < 0) {
-        perror("write");
-        return -1;
-    }
-    return writeRet;
-}
-
 /* Runs a server that listens on given port for connections*/
 int runServer(const int port) {
     int sockfd;
@@ -193,19 +161,20 @@ int runServer(const int port) {
         return -1;
     }
 
-    while(true) {
 
+    while(true) {
+        com_t com;
         struct sockaddr_in client;
         bzero(&client, sizeof(client));
-        int len = sizeof(client);
-        if(readFromClient(sockfd, (struct sockaddr*) &client, (socklen_t*) &len) < 0) {
-            return -1;
-        }
-        puts("Sending message");
-        if(writeToClient(sockfd, (const struct sockaddr*) &client, len) < 0) {
-            return -1;
-        }
+        int cliLen = sizeof(client);
+        init_com(&com, sockfd, MSG_PEEK, (struct sockaddr*) &client, cliLen);
+
+        /*TODO send stuff to client*/
+        receive_com(&com);
+        puts((char *) com.udp_packet->packet->data);
+
         puts("Connection closed");
+        free_com(&com);
     }
 
     return sockfd;
@@ -304,12 +273,6 @@ int main(int argc, char** argv) {
     if((sockfd = runServer(bind_port)) < 0) {
         return -1;
     }
-
-    /*TODO send stuff to client*/
-
-    com_t comm;
-
-
 
     close(sockfd);
     /* Clean up */
