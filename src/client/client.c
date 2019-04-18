@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
 
     com_t comm;
 
-    init_com(&comm, fd, 0, &server, len);
+    init_com(&comm, fd, 0, (struct sockaddr*) &server, len);
 
     char hello[256] = "hello from client";
 

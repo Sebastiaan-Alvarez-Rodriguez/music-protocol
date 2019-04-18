@@ -67,8 +67,12 @@ static uint16_t buf_get_checksum(const void* const buf) {
 void init_com(com_t* const com, unsigned sockfd, int flags, struct sockaddr* const address, socklen_t addr_len) {
     com->sockfd = sockfd;
     com->flags = flags;
+
     com->address = address;
     com->addr_len = addr_len;
+
+    com->udp_packet = malloc(sizeof(udp_t));
+    com->udp_packet->packet = malloc(sizeof(packet_t));
 }
 
 bool send_com(const com_t* const com) {
