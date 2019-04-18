@@ -40,20 +40,14 @@ static bool convert_send(void* buf, size_t* const size, const udp_t* const udp_p
 // Convert a buffer, received with recvcom-function, to udp_t.
 // Returns true on success (and sets pointer), false otherwise
 static bool convert_recv(udp_t* const out, const void* const data, uint16_t size, uint16_t checksum) {
-    void* buf = malloc(size);
-
-    if (buf == NULL || errno == ENOMEM)
+    out->packet->size = size;
+    out->packet->data = malloc(size);
+    if (out->packet->data == NULL || errno == ENOMEM)
         return false;
-    packet_t* packet = malloc(sizeof(packet_t));
-    if (packet == NULL || errno == ENOMEM)
-        return false;
-    packet->size = size;
-    packet->data = buf;
-
-    memcpy(packet->data, data, size);     //Copy data section to packet
 
     out->checksum = checksum;
-    out->packet = packet;
+    memcpy(out->packet->data, data, size);     //Copy data section to packet
+
     return true;
 }
 
@@ -100,10 +94,8 @@ bool receive_com(com_t* const com) {
     void* data_buf = malloc(size);
     recvfrom(com->sockfd, data_buf, sizeof(size), com->flags, com->address, &com->addr_len);
 
-    udp_t* udp_packet = malloc(sizeof(udp_t));
-    convert_recv(udp_packet, data_buf, size, checksum);
-
-    com->udp_packet = udp_packet;
+    convert_recv(com->udp_packet, data_buf, size, checksum);
+    free(data_buf);
     return true;
 }
 
