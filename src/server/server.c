@@ -4,7 +4,6 @@
  */
 
 #include "asp.h"
-#include "buffer/buffer.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -161,7 +160,6 @@ int runServer(const int port) {
         return -1;
     }
 
-
     while(true) {
         com_t com;
         struct sockaddr_in client;
@@ -177,32 +175,6 @@ int runServer(const int port) {
     }
 
     return sockfd;
-}
-
-void buffertest(void) {
-    size_t bufsize = 4;
-    buffer buf;
-    if (!buf_init(&buf, bufsize, sizeof(int)))
-        puts("Did not make buf");
-    printf("Buffer made at address: %p\n", (void*)&buf);
-
-    int x = 1;
-    buf_add(&buf, &x, false);
-    x++;
-    buf_add(&buf, &x, false);
-    x++;
-    buf_add(&buf, &x, false);
-    x++;
-    buf_add(&buf, &x, false);
-    x++;
-    buf_add(&buf, &x, true);
-    x++;
-
-    size_t used = buf_used_size(&buf);
-    printf("Used size: %li\n", used);
-    for (size_t i = 0; i < used; i++)
-        printf("Read index: %li, %i\n", i, *(int*)buf_read(&buf, i));
-    buf_free(&buf);
 }
 
 static void showHelp(const char *prog_name) {
@@ -252,8 +224,6 @@ int main(int argc, char** argv) {
     }
     argc -= optind;
     argv += optind;
-
-    buffertest();
 
     if (!filename) {
         puts("  Please specify a sound file to open with -f <name>");

@@ -42,7 +42,7 @@ clean:
 	@echo Cleaning...
 	@rm -rf $(OBJS) server client
 
-git:
+git: clean
 	git add *
 	git commit
 	git push
