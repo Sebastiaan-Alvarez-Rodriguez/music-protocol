@@ -20,7 +20,7 @@
 
 #include <getopt.h>
 
-#include "com.h"
+#include "communication/com.h"
 #include "communication/checksums/checksum.h"
 
 #define MAX_SOCKET_CONNECTION 3
