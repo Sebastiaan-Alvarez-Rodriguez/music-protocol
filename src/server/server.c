@@ -169,13 +169,13 @@ int runServer(const int port) {
         /*TODO send stuff to client*/
         receive_com(&com);
         char* ptr = com.udp_packet->packet->data;
-        ptr += 4;
         char h[16];
-        memcpy(h, ptr, 16);
+        memcpy(h, ptr, sizeof(h));
         h[16] = '\0';
-        printf("Received: %s\n", h );
+        printf("Received: %s\n", h);
         puts("Connection closed");
         free_com(&com);
+        sleep(1);
     }
 
     return sockfd;

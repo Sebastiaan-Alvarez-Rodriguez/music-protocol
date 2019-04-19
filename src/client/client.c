@@ -118,8 +118,7 @@ int main(int argc, char **argv) {
     com_t comm;
     init_com(&comm, fd, MSG_CONFIRM, (struct sockaddr*) &server);
 
-    char hello[16] = "hello from clie";
-    hello[16] = '\0';
+    char hello[16] = "hello from clien";
 
     comm.udp_packet->packet->data = hello;
     comm.udp_packet->packet->size = sizeof(hello);
@@ -167,6 +166,7 @@ int main(int argc, char **argv) {
     uint8_t* play_ptr;
     uint8_t* recv_ptr = recvbuffer;
     while (true) {
+        sleep(1);
         if (i <= 0) {
             /* TODO: get sample */
 
