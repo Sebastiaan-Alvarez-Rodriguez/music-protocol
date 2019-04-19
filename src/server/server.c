@@ -166,8 +166,7 @@ int runServer(const int port) {
         com_t com;
         struct sockaddr_in client;
         bzero(&client, sizeof(client));
-        int cliLen = sizeof(client);
-        init_com(&com, sockfd, MSG_PEEK, (struct sockaddr*) &client, cliLen);
+        init_com(&com, sockfd, MSG_PEEK, (struct sockaddr*) &client);
 
         /*TODO send stuff to client*/
         receive_com(&com);
@@ -257,7 +256,7 @@ int main(int argc, char** argv) {
     buffertest();
 
     if (!filename) {
-        puts("  Please specify a file to open with -f <name>");
+        puts("  Please specify a sound file to open with -f <name>");
         return -1;
     }
 

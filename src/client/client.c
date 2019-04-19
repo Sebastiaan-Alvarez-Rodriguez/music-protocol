@@ -117,14 +117,12 @@ int main(int argc, char **argv) {
 
     int fd;
     struct sockaddr_in server;
-    if((fd = connectServer(bind_port, server_address, &server)) < 0) {
+    if((fd = connectServer(bind_port, server_address, &server)) < 0)
         return -1;
-    }
-    int len = sizeof(server);
+
 
     com_t comm;
-
-    init_com(&comm, fd, MSG_CONFIRM, (struct sockaddr*) &server, len);
+    init_com(&comm, fd, MSG_CONFIRM, (struct sockaddr*) &server);
 
     char hello[16] = "hello from clie";
     hello[16] = '\0';
