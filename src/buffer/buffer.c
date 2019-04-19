@@ -1,26 +1,28 @@
-#include <stdbool.h>
-#include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <stdio.h>
+#include <errno.h>
 #include <string.h>
 
 #include "buffer.h"
 
+// Helper func: Move pointer 1 place left, wrapping around end of buffer
+// Expects to be called for use: removing one item
+__attribute__ ((unused)) static void buf_move_ptr_left(buffer* const buf) {
+    buf->full = false;
+    buf->end = (buf->end + 1) % buf->max;
+}
+
 // Helper func: Move pointer 1 place right, wrapping around end of buffer
-void buf_move_ptr_right(buffer* const buf) {
+static void buf_move_ptr_right(buffer* const buf) {
     if(buf->full)
         buf->start = (buf->start + 1) % buf->max;
     buf->end = (buf->end + 1) % buf->max;
 
     buf->full = (buf->start == buf->end);
 }
-// Helper func: Move pointer 1 place left, wrapping around end of buffer
-// Expects to be called for use: removing one item
-void buf_move_ptr_left(buffer* const buf) {
-    buf->full = false;
-    buf->end = (buf->end + 1) % buf->max;
-}
+
 
 bool buf_init(buffer* const buf, size_t max_elems, size_t elem_size) {
     void* loc = malloc(max_elems*elem_size);

@@ -2,8 +2,8 @@ CC      ?= gcc
 SRC      = src
 OBJS     = obj
 
-WARNINGS = -Wall -Wextra -pedantic -g
-IDIRS    = -I$(SRC)
+WARNINGS = -Wall -Wextra -Wno-unused-variable -pedantic -g
+IDIRS    = -I$(SRC) -I$(SRC)/communication
 LDIRS    =  -lm -lasound
 CFLAGS   = $(IDIRS) -std=gnu99 $(WARNINGS) $(LDIRS)
 
@@ -42,7 +42,7 @@ clean:
 	@echo Cleaning...
 	@rm -rf $(OBJS) server client
 
-git:
+git: clean
 	git add *
 	git commit
 	git push
