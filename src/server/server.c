@@ -4,7 +4,6 @@
  */
 
 #include "asp.h"
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -22,6 +21,7 @@
 #include <getopt.h>
 
 #include "com.h"
+#include "communication/checksums/checksum.h"
 
 #define MAX_SOCKET_CONNECTION 3
 #define BIND_PORT 1235
@@ -188,6 +188,17 @@ static void showHelp(const char *prog_name) {
     puts("-h            Shows this dialog");
 }
 
+void testchecksums() {
+    char d1[16] = "AAAABBBBCCCCDDDD";
+    char d2[16] = "AAAABBBBCCCCCDDD";
+    fprintf(stderr, "%u\n", generate(d1, sizeof(d1)));
+    fprintf(stderr, "%u\n", generate(d2, sizeof(d2)));
+    char d3[32] = "AAAABBBBCCCCCDDDAAAABBBBCCCCCDDD";
+    char d4[32] = "AAAABBBBCCCCCDDDAAAABBBBCCCCCDDE";
+    fprintf(stderr, "%u\n", generate(d3, sizeof(d3)));
+    fprintf(stderr, "%u\n", generate(d4, sizeof(d4)));
+}
+
 int main(int argc, char** argv) {
     unsigned quality = 5;
     unsigned short bind_port = 1235;
@@ -225,6 +236,7 @@ int main(int argc, char** argv) {
     argc -= optind;
     argv += optind;
 
+    testchecksums();
     if (!filename) {
         puts("  Please specify a sound file to open with -f <name>");
         return -1;
