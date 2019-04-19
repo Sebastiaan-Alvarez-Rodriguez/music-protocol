@@ -164,12 +164,16 @@ int runServer(const int port) {
         com_t com;
         struct sockaddr_in client;
         bzero(&client, sizeof(client));
-        init_com(&com, sockfd, MSG_PEEK, (struct sockaddr*) &client);
+        init_com(&com, sockfd, MSG_WAITALL, (struct sockaddr*) &client);
 
         /*TODO send stuff to client*/
         receive_com(&com);
-        puts((char *) com.udp_packet->packet->data);
-
+        char* ptr = com.udp_packet->packet->data;
+        ptr += 4;
+        char h[16];
+        memcpy(h, ptr, 16);
+        h[16] = '\0';
+        printf("Received: %s\n", h );
         puts("Connection closed");
         free_com(&com);
     }

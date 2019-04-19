@@ -18,13 +18,13 @@
 // Convert a udp_t to be sent with sendcom-function
 // Returns true on success, false otherwise
 // On success, sets pointer to created buffer, and one to size of buf
-static bool convert_send(void* buf, size_t* const size, const udp_t* const udp_packet) {
+static bool convert_send(void** buf, size_t* const size, const udp_t* const udp_packet) {
     *size = sizeof(uint16_t)*2 + udp_packet->packet->size;
-    buf = malloc(*size);
+    *buf = malloc(*size);
     if (buf == NULL || errno == ENOMEM)
         return false;
 
-    uint16_t* pointer = buf;
+    uint16_t* pointer = *buf;
     *pointer = udp_packet->packet->size;   // Write size field
     pointer += sizeof(uint16_t);           // Move to checksum field
     *pointer = udp_packet->checksum;       // Write checksum field
@@ -77,11 +77,20 @@ bool send_com(const com_t* const com) {
 
     void* buf = NULL;
     size_t size;
-    if (!convert_send(buf, &size, com->udp_packet))
+    if (!convert_send(&buf, &size, com->udp_packet)) {
+        perror("convert_send");
         return false;
+    }
 
+    printf("%p\n", buf  );
+    printf("fd: %d\n", size);
     bool ret = sendto(com->sockfd, buf, size, com->flags, com->address, com->addr_len) >= 0;
+    char* ptr = (char *) buf;
+    ptr += 4;
+    puts(ptr);
     free(buf);
+    if(!ret)
+        perror("sendto");
     return ret;
 }
 
@@ -91,7 +100,8 @@ bool receive_com(com_t* const com) {
         return false;
 
     //Peek at size and checksum
-    recvfrom(com->sockfd, size_checksum_buf, sizeof(uint16_t)*2, MSG_PEEK, com->address, &com->addr_len);
+    if(recvfrom(com->sockfd, size_checksum_buf, sizeof(uint16_t)*2, MSG_PEEK, com->address, &com->addr_len) < 0)
+        return false;
     uint16_t size = *(uint16_t*) size_checksum_buf;
     uint16_t checksum = buf_get_checksum(size_checksum_buf);
     free(size_checksum_buf);
