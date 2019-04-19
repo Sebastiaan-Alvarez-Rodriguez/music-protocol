@@ -27,28 +27,22 @@
 
 // Sets up sockets to connect to a server at given
 // address and port.
-int connectServer(const unsigned short port, const char* address, struct sockaddr_in* out) {
+int connectServer(const unsigned short port, const char* address, struct sockaddr_in* out_addr) {
     int socketFd;
-    struct sockaddr_in server;
 
     if((socketFd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         perror("Socket Creation");
         return -1;
     }
 
-    int serverLen = sizeof(server);
-    bzero(&server, serverLen);
-    server.sin_family = AF_INET;
-    server.sin_port = htons(port);
+    bzero(out_addr, sizeof(*out_addr));
+    out_addr->sin_family = AF_INET;
+    out_addr->sin_port = htons(port);
 
-    if(inet_aton(address, &server.sin_addr) == 0) {
+    if(inet_aton(address, &out_addr->sin_addr) == 0) {
         perror("Function inet_aton");
         return -1;
     }
-
-    out->sin_addr.s_addr = server.sin_addr.s_addr;
-    out->sin_family = server.sin_family;
-    out->sin_port = server.sin_port;
 
     return socketFd;
 }
@@ -124,8 +118,7 @@ int main(int argc, char **argv) {
     com_t comm;
     init_com(&comm, fd, MSG_CONFIRM, (struct sockaddr*) &server);
 
-    char hello[16] = "hello from clie";
-    hello[16] = '\0';
+    char hello[16] = "hello from clien";
 
     comm.udp_packet->packet->data = hello;
     comm.udp_packet->packet->size = sizeof(hello);
@@ -173,6 +166,7 @@ int main(int argc, char **argv) {
     uint8_t* play_ptr;
     uint8_t* recv_ptr = recvbuffer;
     while (true) {
+        sleep(1);
         if (i <= 0) {
             /* TODO: get sample */
 
