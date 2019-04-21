@@ -168,14 +168,15 @@ int runServer(const int port) {
 
         /*TODO send stuff to client*/
         receive_com(&com);
-        char* ptr = com.packet->data;
-        char h[16];
-        memcpy(h, ptr, sizeof(h));
-        h[16] = '\0';
-        printf("Received: %s\n", h);
+        
+        char* received = malloc(com.packet->size+1);
+        memcpy(received, com.packet->data, com.packet->size);
+        received[com.packet->size] = '\0';
+        printf("Received: %s\n", received);
         puts("Connection closed");
+        free(received);
         free_com(&com);
-        sleep(1);
+        sleep(10);
     }
 
     return sockfd;

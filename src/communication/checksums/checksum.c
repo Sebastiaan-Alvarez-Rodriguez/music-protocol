@@ -21,12 +21,14 @@ uint16_t generate_16bit_fletcher(const void* const data, uint16_t size) {
 }
 
 uint32_t generate_32bit_fletcher(const void* const data, uint16_t size) {
+    uint16_t words = size/2;
+    
     const uint16_t* pointer = data;
 
     uint32_t sum1 = 0xffff, sum2 = 0xffff;
-    while (size) {
-            uint16_t tlen = size > 359 ? 359 : size;
-            size -= tlen;
+    while (words) {
+            uint16_t tlen = words > 359 ? 359 : words;
+            words -= tlen;
             do {
                 sum2 += sum1 += *pointer++;
             } while (--tlen);

@@ -15,7 +15,7 @@
 //Raw buffer convention:
 // 0      15 - 16 31 - 32     63 - sizeof(data)-1
 // checksum1 - size  - checksum2 - data
-// Total buffer size is 64 + data length, and %16=0
+// Total buffer size is 64 + data length, and
 ///////////////////////////////////////////////////
 
 // Get checksum1 from raw received buffer
@@ -39,18 +39,17 @@ static uint32_t buf_get_checksum2(const void* const buf) {
 
 // Get data-pointer from raw received buffer
 static const void* buf_get_data(const void* const buf) {
-    const uint32_t* pointer = buf;
-    pointer += 2;
+    const uint64_t* pointer = buf;
+    ++pointer;
     return pointer;
 }
 
 static uint16_t make_checksum1(uint16_t sizefield, uint32_t checksum2field) {
-    uint16_t arr[3];
-    uint16_t* pointer = arr;
-    *pointer = sizefield;
-    ++pointer;
-    *pointer = checksum2field;
-    return generate_16bit_fletcher(arr, sizeof(arr));
+    uint16_t buf[3];
+    buf[0] = sizefield;
+    buf[1] = checksum2field & 0xffff;
+    buf[2] = checksum2field >> 16;
+    return generate_16bit_fletcher(buf, sizeof(uint16_t)+sizeof(uint32_t));
 }
 
 static uint32_t make_checksum2(const void* const buffer, uint16_t buffersize) {
@@ -63,12 +62,16 @@ static uint32_t make_checksum2(const void* const buffer, uint16_t buffersize) {
 static bool convert_send(void** buf, uint16_t* const size, const packet_t* const packet) {
     *size = sizeof(uint16_t)*2 + sizeof(uint32_t) + packet->size;
     *buf = malloc(*size);
-    if (buf == NULL || errno == ENOMEM)
+    if (*buf == NULL || errno == ENOMEM)
         return false;
+    bzero(*buf, *size);
 
     // Compute checksums
     uint32_t checksum2 = make_checksum2(packet->data, packet->size);
     uint16_t checksum1 = make_checksum1(packet->size, checksum2);
+
+    printf("Checksum2: %u\n", checksum2);
+    printf("Checksum1: %u\n", checksum1);
 
     uint16_t* pointer = *buf;
     *pointer = checksum1;            // Write checksum1 field
@@ -98,11 +101,11 @@ static bool convert_recv(packet_t* const out, const void* const data, uint16_t s
 
 //Print all bits for given size in buffer. assumes little endian
 static void print_bits(const size_t size, const void* const ptr) {
-    unsigned char* b = (unsigned char*) ptr;
+    uint8_t* b = (uint8_t*) ptr;
 
     for (int i=size-1;i>=0;i--)
         for (int j=7;j>=0;j--) {
-            unsigned char byte = (b[i] >> j) & 1;
+            uint8_t byte = (b[i] >> j) & 1;
             printf("%u", byte);
         }
     puts("");
@@ -118,14 +121,8 @@ void init_com(com_t* const com, unsigned sockfd, int flags, struct sockaddr* con
 }
 
 bool send_com(const com_t* const com) {
-    if (com->packet->size % 16 != 0) {
-        fprintf(stderr, "size = %u (mod 16 != 0)\n", com->packet->size);
-        errno = EINVAL;
-        return false;
-    }
-
     void* buf = NULL;
-    uint16_t size;
+    uint16_t size = 0;
     if (!convert_send(&buf, &size, com->packet)) {
         perror("convert_send");
         return false;
@@ -136,9 +133,10 @@ bool send_com(const com_t* const com) {
     printf("Size data: %u\n", com->packet->size);
     printf("Size other: %u\n", size - com->packet->size);
 
-    bool ret = sendto(com->sockfd, buf, size, com->flags, com->address, com->addr_len) >= 0;
     puts("Raw data:");
     print_bits(size, buf);
+
+    bool ret = sendto(com->sockfd, buf, size, com->flags, com->address, com->addr_len) >= 0;
     free(buf);
     if(!ret)
         perror("sendto");
@@ -180,5 +178,6 @@ bool receive_com(com_t* const com) {
 }
 
 void free_com(const com_t* const com) {
+    free(com->packet->data);
     free(com->packet);
 }
