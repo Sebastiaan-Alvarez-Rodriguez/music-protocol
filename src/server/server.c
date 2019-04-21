@@ -4,7 +4,6 @@
  */
 
 #include "asp.h"
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -21,7 +20,8 @@
 
 #include <getopt.h>
 
-#include "com.h"
+#include "communication/checksums/checksum.h"
+#include "communication/com.h"
 
 #define MAX_SOCKET_CONNECTION 3
 #define BIND_PORT 1235
@@ -168,14 +168,15 @@ int runServer(const int port) {
 
         /*TODO send stuff to client*/
         receive_com(&com);
-        char* ptr = com.udp_packet->packet->data;
-        char h[16];
-        memcpy(h, ptr, sizeof(h));
-        h[16] = '\0';
-        printf("Received: %s\n", h);
+        
+        char* received = malloc(com.packet->size+1);
+        memcpy(received, com.packet->data, com.packet->size);
+        received[com.packet->size] = '\0';
+        printf("Received: %s\n", received);
         puts("Connection closed");
+        free(received);
         free_com(&com);
-        sleep(1);
+        sleep(10);
     }
 
     return sockfd;

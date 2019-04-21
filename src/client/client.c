@@ -25,6 +25,8 @@
 
 #define MSG "Hello from client"
 
+bool debug = false;
+
 // Sets up sockets to connect to a server at given
 // address and port.
 int connectServer(const unsigned short port, const char* address, struct sockaddr_in* out_addr) {
@@ -47,8 +49,35 @@ int connectServer(const unsigned short port, const char* address, struct sockadd
     return socketFd;
 }
 
+void testconnection(char* server_address, unsigned short bind_port) {
+    int fd;
+    struct sockaddr_in server;
+    if((fd = connectServer(bind_port, server_address, &server)) < 0)
+        exit(-1);
 
-bool debug = false;
+    com_t comm;
+    init_com(&comm, fd, MSG_CONFIRM, (struct sockaddr*) &server);
+
+    char* hello = malloc(9);
+    bzero(hello, 9);
+    char* tmp = hello;
+    for (int i = 0; i < 9; i++) {
+        *tmp = 'h';
+        ++tmp;
+    }
+
+    comm.packet->data = hello;
+    comm.packet->size = 9;
+
+    if(!send_com(&comm)) {
+        perror("send_com");
+        exit(-1);
+    }
+    free_com(&comm);
+    close(fd);
+    sleep(10);
+}
+
 
 static void showHelp(const char *prog_name) {
     puts(prog_name);
@@ -64,10 +93,10 @@ static void showHelp(const char *prog_name) {
 
 int main(int argc, char **argv) {
     const char* const prog_name = argv[0];
-    unsigned quality = 5;
     unsigned buffer_size = 1024;
-    unsigned short bind_port = 1235;
+    unsigned quality = 5;
     char* server_address = "127.0.0.1";
+    unsigned short bind_port = 1235;
 
     char c;
     while ((c = getopt(argc, argv, "b:q:i:p:dh")) != -1){
@@ -92,7 +121,9 @@ int main(int argc, char **argv) {
                 }
                 break;
             case 'i':
-
+                free(server_address);
+                server_address = optarg;
+                break;
             case 'p':
                 bind_port = (unsigned short) atoi(optarg);
                 break;
@@ -109,24 +140,7 @@ int main(int argc, char **argv) {
     argv += optind;
 
 
-    int fd;
-    struct sockaddr_in server;
-    if((fd = connectServer(bind_port, server_address, &server)) < 0)
-        return -1;
-
-
-    com_t comm;
-    init_com(&comm, fd, MSG_CONFIRM, (struct sockaddr*) &server);
-
-    char hello[16] = "hello from clien";
-
-    comm.udp_packet->packet->data = hello;
-    comm.udp_packet->packet->size = sizeof(hello);
-
-    if(!send_com(&comm)) {
-        perror("send_com");
-        return -1;
-    }
+    testconnection(server_address, bind_port);
 
 
     /* Open audio device */
@@ -202,8 +216,6 @@ int main(int argc, char **argv) {
         /* TODO: try to receive a block from the server? */
 
     }
-    free_com(&comm);
-    close(fd);
 
     /* clean up */
     free(recvbuffer);
