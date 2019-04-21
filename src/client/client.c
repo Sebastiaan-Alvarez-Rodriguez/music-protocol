@@ -120,8 +120,8 @@ int main(int argc, char **argv) {
 
     char hello[16] = "hello from clien";
 
-    comm.udp_packet->packet->data = hello;
-    comm.udp_packet->packet->size = sizeof(hello);
+    comm.packet->data = hello;
+    comm.packet->size = sizeof(hello);
 
     if(!send_com(&comm)) {
         perror("send_com");

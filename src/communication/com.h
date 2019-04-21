@@ -10,17 +10,17 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include "communication/packets/udp.h"
+#include "communication/packet/packet.h"
 
 typedef struct {
     unsigned sockfd;
-    udp_t* udp_packet;
+    packet_t* packet;
     int flags;
     struct sockaddr* address;
     socklen_t addr_len;
 } com_t;
 
-// Initialize a com-struct (except udp_packet)
+// Initialize a com-struct
 void init_com(com_t* const com, unsigned sockfd, int flags, struct sockaddr* const address);
 
 // Send a udp_packet to destined client

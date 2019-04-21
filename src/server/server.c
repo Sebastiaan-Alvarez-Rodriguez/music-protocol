@@ -20,8 +20,8 @@
 
 #include <getopt.h>
 
-#include "communication/com.h"
 #include "communication/checksums/checksum.h"
+#include "communication/com.h"
 
 #define MAX_SOCKET_CONNECTION 3
 #define BIND_PORT 1235
@@ -168,7 +168,7 @@ int runServer(const int port) {
 
         /*TODO send stuff to client*/
         receive_com(&com);
-        char* ptr = com.udp_packet->packet->data;
+        char* ptr = com.packet->data;
         char h[16];
         memcpy(h, ptr, sizeof(h));
         h[16] = '\0';
@@ -190,17 +190,6 @@ static void showHelp(const char *prog_name) {
     puts("-p port       Specify which port the client should connect to");
     puts("-d debug      If set, prints debug information");
     puts("-h            Shows this dialog");
-}
-
-void testchecksums() {
-    char d1[16] = "AAAABBBBCCCCDDDD";
-    char d2[16] = "AAAABBBBCCCCCDDD";
-    fprintf(stderr, "%u\n", generate(d1, sizeof(d1)));
-    fprintf(stderr, "%u\n", generate(d2, sizeof(d2)));
-    char d3[32] = "AAAABBBBCCCCCDDDAAAABBBBCCCCCDDD";
-    char d4[32] = "AAAABBBBCCCCCDDDAAAABBBBCCCCCDDE";
-    fprintf(stderr, "%u\n", generate(d3, sizeof(d3)));
-    fprintf(stderr, "%u\n", generate(d4, sizeof(d4)));
 }
 
 int main(int argc, char** argv) {
@@ -240,7 +229,6 @@ int main(int argc, char** argv) {
     argc -= optind;
     argv += optind;
 
-    testchecksums();
     if (!filename) {
         puts("  Please specify a sound file to open with -f <name>");
         return -1;
