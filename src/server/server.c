@@ -164,7 +164,7 @@ int runServer(const int port) {
         com_t com;
         struct sockaddr_in client;
         bzero(&client, sizeof(client));
-        init_com(&com, sockfd, MSG_WAITALL, (struct sockaddr*) &client, FLAG_NONE);
+        com_init(&com, sockfd, MSG_WAITALL, (struct sockaddr*) &client, FLAG_NONE, 0);
 
         /*TODO send stuff to client*/
         receive_com(&com);

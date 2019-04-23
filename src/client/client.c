@@ -56,7 +56,7 @@ void testconnection(char* server_address, unsigned short bind_port) {
         exit(-1);
 
     com_t comm;
-    init_com(&comm, fd, MSG_CONFIRM, (struct sockaddr*) &server, flags_get_raw(2, FLAG_ACK, FLAG_RR));
+    com_init(&comm, fd, MSG_CONFIRM, (struct sockaddr*) &server, flags_get_raw(2, FLAG_ACK, FLAG_RR), 0);
 
     char* hello = malloc(27);
     bzero(hello, 27);

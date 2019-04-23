@@ -21,7 +21,7 @@ typedef struct {
 } com_t;
 
 // Initialize a com-struct
-void init_com(com_t* const com, unsigned sockfd, int flags, struct sockaddr* const address, uint16_t packet_flags);
+void com_init(com_t* const com, unsigned sockfd, int flags, struct sockaddr* const address, uint8_t packet_flags, uint8_t packetnr);
 
 // Send a udp_packet to destined client
 // Returns true on success, false otherwise (should check errno)
