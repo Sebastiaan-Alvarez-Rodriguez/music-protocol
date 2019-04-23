@@ -11,13 +11,6 @@
 #include "com.h"
 
 ///////////////////////////////////////////////////
-// Important - Read me
-//Raw buffer convention:
-// 0      15 - 16 31 - 32     63 - sizeof(data)-1
-// checksum1 - size  - checksum2 - data
-// Total buffer size is 64 + data length, and
-///////////////////////////////////////////////////
-///////////////////////////////////////////////////
 // Important - Read me NEW
 //Raw buffer convention:
 // 0      15 - 16 31 - 32 47 - 48     63 - sizeof(data)-1
