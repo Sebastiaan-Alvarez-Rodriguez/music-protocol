@@ -15,15 +15,15 @@
 #include <alsa/asoundlib.h>
 #include <getopt.h>
 
-#include "com.h"
+#include "communication/com.h"
+#include "communication/flags/flags.h"
+
 
 #define NUM_CHANNELS 2
 #define SAMPLE_RATE 44100
 #define BLOCK_SIZE 1024
 /* 1 Frame = Stereo 16 bit = 32 bit = 4kbit */
 #define FRAME_SIZE 4
-
-#define MSG "Hello from client"
 
 bool debug = false;
 
@@ -56,18 +56,19 @@ void testconnection(char* server_address, unsigned short bind_port) {
         exit(-1);
 
     com_t comm;
-    init_com(&comm, fd, MSG_CONFIRM, (struct sockaddr*) &server);
+    init_com(&comm, fd, MSG_CONFIRM, (struct sockaddr*) &server, flags_get_raw(2, FLAG_ACK, FLAG_RR));
 
-    char* hello = malloc(9);
-    bzero(hello, 9);
+    char* hello = malloc(27);
+    bzero(hello, 27);
     char* tmp = hello;
-    for (int i = 0; i < 9; i++) {
-        *tmp = 'h';
+    for (int i = 0; i < 26; i++) {
+        *tmp = 'a'+i;
         ++tmp;
     }
+    *tmp = '\0';
 
     comm.packet->data = hello;
-    comm.packet->size = 9;
+    comm.packet->size = 27;
 
     if(!send_com(&comm)) {
         perror("send_com");
