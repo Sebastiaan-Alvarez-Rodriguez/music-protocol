@@ -20,8 +20,8 @@
 
 #include <getopt.h>
 
-#include "communication/checksums/checksum.h"
 #include "communication/com.h"
+#include "communication/flags/flags.h"
 
 #define MAX_SOCKET_CONNECTION 3
 #define BIND_PORT 1235
@@ -164,14 +164,13 @@ int runServer(const int port) {
         com_t com;
         struct sockaddr_in client;
         bzero(&client, sizeof(client));
-        init_com(&com, sockfd, MSG_WAITALL, (struct sockaddr*) &client);
+        init_com(&com, sockfd, MSG_WAITALL, (struct sockaddr*) &client, FLAG_NONE);
 
         /*TODO send stuff to client*/
         receive_com(&com);
         
-        char* received = malloc(com.packet->size+1);
+        char* received = malloc(com.packet->size);
         memcpy(received, com.packet->data, com.packet->size);
-        received[com.packet->size] = '\0';
         printf("Received: %s\n", received);
         puts("Connection closed");
         free(received);
