@@ -29,34 +29,33 @@ bool debug = false;
 
 // Sets up sockets to connect to a server at given
 // address and port.
-int connectServer(const unsigned short port, const char* address, struct sockaddr_in* out_addr) {
-    int socketFd;
-
-    if((socketFd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
+bool setupConnection(const unsigned short port, const char* address, con_info_t* const con) {
+    int fd;
+    if((fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         perror("Socket Creation");
-        return -1;
+        return false;
     }
 
-    bzero(out_addr, sizeof(*out_addr));
-    out_addr->sin_family = AF_INET;
-    out_addr->sin_port = htons(port);
+    bzero(&con->remote_addr, sizeof(con->remote_addr));
+    con->sockfd = fd;
+    con->remote_addr.sin_family = AF_INET;
+    con->remote_addr.sin_family = AF_INET;
+    con->remote_addr.sin_port = htons(port);
 
-    if(inet_aton(address, &out_addr->sin_addr) == 0) {
+    if(inet_aton(address, &con->remote_addr.sin_addr) == 0) {
         perror("Function inet_aton");
-        return -1;
+        return false;
     }
-
-    return socketFd;
+    return true;
 }
 
 void testconnection(char* server_address, unsigned short bind_port) {
-    int fd;
-    struct sockaddr_in server;
-    if((fd = connectServer(bind_port, server_address, &server)) < 0)
+    con_info_t connection;
+    if(!setupConnection(bind_port, server_address, &connection))
         exit(-1);
 
     com_t comm;
-    init_com(&comm, fd, MSG_CONFIRM, (struct sockaddr*) &server, flags_get_raw(2, FLAG_ACK, FLAG_RR));
+    init_com(&comm, connection.sockfd, MSG_CONFIRM, (struct sockaddr*) &connection.remote_addr, flags_get_raw(2, FLAG_ACK, FLAG_RR));
 
     char* hello = malloc(27);
     bzero(hello, 27);
@@ -75,7 +74,7 @@ void testconnection(char* server_address, unsigned short bind_port) {
         exit(-1);
     }
     free_com(&comm);
-    close(fd);
+    close_con(&connection);
     sleep(10);
 }
 

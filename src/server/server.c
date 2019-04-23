@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 
+#include <sys/time.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -133,8 +134,16 @@ int setupSocket(const unsigned short port) {
     struct sockaddr_in server;
     //Create a socket and store the fd
     if((socketFd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
-      perror("Socket creation");
-      return -1;
+        perror("socket");
+        return -1;
+    };
+
+    struct timeval time;
+    time.tv_sec = 5;
+    time.tv_usec = 0;
+    if(setsockopt(socketFd, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(time))){
+        perror("setsockopt");
+        return -1;
     };
 
     //Zero byte server variable
@@ -145,7 +154,7 @@ int setupSocket(const unsigned short port) {
 
     // Bind the socket to the server address
     if(bind(socketFd, (const struct sockaddr*) &server, sizeof(server)) < 0) {
-        perror("Socket Binding");
+        perror("bind");
         return -1;
     }
 
@@ -154,11 +163,13 @@ int setupSocket(const unsigned short port) {
 }
 
 /* Runs a server that listens on given port for connections*/
-int runServer(const int port) {
+int runServer(const unsigned port, const unsigned maxConnections) {
     int sockfd;
     if((sockfd = setupSocket(port)) < 0) {
         return -1;
     }
+
+
 
     while(true) {
         com_t com;
@@ -167,15 +178,22 @@ int runServer(const int port) {
         init_com(&com, sockfd, MSG_WAITALL, (struct sockaddr*) &client, FLAG_NONE);
 
         /*TODO send stuff to client*/
-        receive_com(&com);
-        
-        char* received = malloc(com.packet->size);
-        memcpy(received, com.packet->data, com.packet->size);
-        printf("Received: %s\n", received);
-        puts("Connection closed");
-        free(received);
-        free_com(&com);
-        sleep(10);
+        if(receive_com(&com)) {
+
+
+            char* received = malloc(com.packet->size);
+            memcpy(received, com.packet->data, com.packet->size);
+            printf("Received: %s\n", received);
+            puts("Connection closed");
+            free(received);
+            free_com(&com);
+            sleep(10);
+        }
+        else {
+            if(errno == EWOULDBLOCK) {
+                puts("Connection timeout");
+            }
+        }
     }
 
     return sockfd;
@@ -243,7 +261,7 @@ int main(int argc, char** argv) {
 
     int sockfd;
     /* Start sockets and wait for connections*/
-    if((sockfd = runServer(bind_port)) < 0) {
+    if((sockfd = runServer(bind_port, 10)) < 0) {
         return -1;
     }
 
