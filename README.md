@@ -5,17 +5,17 @@ This is assignment 2 of
 
 ___
 
-#Convention
+# Convention
 In this section we explain our convention in detail.
 
-##Communication process
+## Communication process
 We have a server `S` and a client `C`.
 
-###Initial communication
+### Initial communication
 `C` initiates communication by sending ACK to `S`, together with its buffersize.
 `S` registers client address details. If `S` will start sending batches of packets. If `S` does not start sending anything, the communication initiation packet must have been faulty/dropped. `C` times out, and retries to initiate communication.
 
-###Intermediate communication
+### Intermediate communication
 `S` sends a batch of packets with a total size exactly fitting into the buffer of `C`.
 `C` receives the packets of this batch. For a batch, the following may happen on the client side:
  1. Everything okay: take data from buffer and send RR to acknowledge next batch
@@ -24,7 +24,7 @@ We have a server `S` and a client `C`.
  4. Packet(s) X checksum mismatch (faulty): Perform 3.
 
 
-##Convention visualisation
+## Convention visualisation
 ```
  0      7 8     15 16    23 24    31
 +--------+--------+--------+--------+
@@ -43,7 +43,7 @@ Please see the explanation of every field below:
  * Checksum2: This is a 16-bit checksum for the data-field
  * Data:      Here, all data is stored
 
-##Flags
+## Flags
 
 Flag | Bit   | Special arg | Meaning
 ---- | ----- | ----------- | -------------
