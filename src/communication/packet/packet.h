@@ -4,11 +4,12 @@
 
 typedef struct {
     uint16_t size;
-    uint16_t flags;
+    uint8_t flags;
+    uint8_t nr;
     void* data;
 } packet_t;
 
 // Initialize a packet_t-struct
-void init_packet(packet_t* const packet, uint16_t flags);
+void packet_init(packet_t* const packet, uint8_t flags, uint8_t packetnr);
 
 #endif

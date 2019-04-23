@@ -12,15 +12,15 @@ enum flags {
 // Ready to Receive
 // Reject all remaining frames
 
-// Returns a uint16_t containing <amount> specified flags
+// Returns a uint8_t containing <amount> specified flags
 // Returns 0 if FLAGS_NONE is in flags
-uint16_t flags_get_raw(unsigned amount, ...);
+uint8_t flags_get_raw(unsigned amount, ...);
 
-bool flags_is_NONE(uint16_t rawflags);
+bool flags_is_NONE(uint8_t rawflags);
 
-bool flags_is_ACK(uint16_t rawflags);
+bool flags_is_ACK(uint8_t rawflags);
 
-bool flags_is_REJ(uint16_t rawflags);
+bool flags_is_REJ(uint8_t rawflags);
 
-bool flags_is_RR(uint16_t rawflags);
+bool flags_is_RR(uint8_t rawflags);
 #endif
