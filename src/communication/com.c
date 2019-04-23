@@ -83,8 +83,8 @@ static bool convert_send(void** buf, uint16_t* const size, const packet_t* const
     uint16_t checksum2 = make_checksum2(packet->data, packet->size);
     uint16_t checksum1 = make_checksum1(packet->size, packet->flags, checksum2);
 
-    printf("Checksum2: %#8X\n", checksum2);
-    printf("Checksum1: %#8X\n", checksum1);
+    printf("Checksum2: %#8x\n", checksum2);
+    printf("Checksum1: %#8x\n", checksum1);
 
     uint16_t* pointer = *buf;
     *pointer = checksum1;            // Write checksum1 field

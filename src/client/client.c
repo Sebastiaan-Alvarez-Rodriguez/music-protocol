@@ -25,8 +25,6 @@
 /* 1 Frame = Stereo 16 bit = 32 bit = 4kbit */
 #define FRAME_SIZE 4
 
-#define MSG "Hello from client"
-
 bool debug = false;
 
 // Sets up sockets to connect to a server at given
@@ -60,17 +58,17 @@ void testconnection(char* server_address, unsigned short bind_port) {
     com_t comm;
     init_com(&comm, fd, MSG_CONFIRM, (struct sockaddr*) &server, flags_get_raw(2, FLAG_ACK, FLAG_RR));
 
-    char* hello = malloc(20);
-    bzero(hello, 20);
+    char* hello = malloc(27);
+    bzero(hello, 27);
     char* tmp = hello;
-    for (int i = 0; i < 19; i++) {
+    for (int i = 0; i < 26; i++) {
         *tmp = 'a'+i;
         ++tmp;
     }
     *tmp = '\0';
 
     comm.packet->data = hello;
-    comm.packet->size = 20;
+    comm.packet->size = 27;
 
     if(!send_com(&comm)) {
         perror("send_com");
