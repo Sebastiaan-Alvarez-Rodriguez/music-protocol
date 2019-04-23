@@ -3,8 +3,6 @@ This is assignment 2 of
  * Andrew Huang (s1913999)
  * Sebastiaan Alvarez Rodriguez (s1810979)
 
-___
-
 # Convention
 In this section we explain our convention in detail.
 
