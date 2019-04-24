@@ -1,4 +1,4 @@
-#Networks 2
+# Networks 2
 This is assignment 2 of
  * Andrew Huang (s1913999)
  * Sebastiaan Alvarez Rodriguez (s1810979)
@@ -21,7 +21,7 @@ We have a server `S` and a client `C`.
  3. Packet(s) X missing: `C` sends REJ X to `S` after timeout. `S` resends X.
  4. Packet(s) X checksum mismatch (faulty), treat as missing, then perform 3.
 
-## Final communication
+### Final communication
 `S` sends the last batch of packets. Again same rules apply as with the intermediate
 communication. If 1. happens, then `S` receives the RR flag after which `S` will send an
 EOS flag, meaning end of the stream, and close the connection to `C`.
@@ -30,6 +30,7 @@ and will stop asking the server for packets.
 `C` can then successfully clean up and exit, while `S` will wait for the next connection.  
 
 ## Convention visualization
+Here below you can see what a packet looks like when sent/received, and you can find what every field means.
 ```
  0      7 8     15 16    23 24    31
 +--------+--------+--------+--------+
