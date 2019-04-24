@@ -7,11 +7,12 @@ IDIRS    = -I$(SRC) -I$(SRC)/communication
 LDIRS    =  -lm -lasound
 CFLAGS   = $(IDIRS) -std=gnu99 $(WARNINGS) $(LDIRS)
 
-find = $(shell find $1 -type f ! -name 'server.c' ! -name 'client.c' -name $2 -print 2>/dev/null)
+find = $(shell find $1 -type f ! -path $3 -name $2 -print 2>/dev/null)
 
-SRCS := $(call find, $(SRC)/, "*.c")
-SERVEROBJECTS := $(SRCS:%.c=$(OBJS)/%.o) $(OBJS)/$(SRC)/server/server.o
-CLIENTOBJECTS := $(SRCS:%.c=$(OBJS)/%.o) $(OBJS)/$(SRC)/client/client.o
+SERVERSRCS := $(call find, $(SRC)/, "*.c", "*/client/*")
+CLIENTSRCS := $(call find, $(SRC)/, "*.c", "*/server/*")
+SERVEROBJECTS := $(SERVERSRCS:%.c=$(OBJS)/%.o)
+CLIENTOBJECTS := $(CLIENTSRCS:%.c=$(OBJS)/%.o)
 
 CLEAR  = [0m
 CYAN   = [1;36m
