@@ -58,3 +58,8 @@ ACK  | `0x1` | Buffersize  | Ready to receive batch 1
 REJ  | `0x2` | Packetnr    | Reject specified packetnr
 RR   | `0x4` | Batchnr     | Ready to receive next batch
 EOS  | `0x8` | No args     | End of stream
+
+## Notes
+* Initial communication, client sends initial quality level
+* Server adjusts the packet sizes according to the quality level
+* Initial buffer fully filled, subsequently k filled

@@ -19,6 +19,7 @@ int main(int argc, char** argv) {
     unsigned short port = 1235;
     char c;
     char* filename = NULL;
+    unsigned max_clients = 5;
     const char* const prog_name = argv[0];
     while ((c = getopt(argc, argv, "f:q:dh")) != -1){
         switch (c) {
@@ -59,6 +60,8 @@ int main(int argc, char** argv) {
     if (!server_set_music(&server, filename))
         return -1;
     if (!server_set_port(&server, port))
+        return -1;
+    if (!server_set_num_clients(&server, max_clients))
         return -1;
 
     server_run(&server, initial_quality);
