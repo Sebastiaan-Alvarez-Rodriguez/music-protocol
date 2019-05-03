@@ -218,6 +218,11 @@ bool receive_com(com_t* const com) {
     return true;
 }
 
+bool receive_peek_com(const com_t* const com) {
+    // TODO: Add timeout!
+    return recvfrom(com->sockfd, NULL, 0, MSG_PEEK, com->address, &com->addr_len) < 0;
+}
+
 void free_com(const com_t* const com) {
     free(com->packet->data);
     free(com->packet);
