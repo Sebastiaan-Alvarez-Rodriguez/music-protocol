@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 
+#include "client/client/client.h"
 
 static void showHelp(const char *prog_name) {
     puts(prog_name);
@@ -14,6 +15,19 @@ static void showHelp(const char *prog_name) {
     puts("-p port       Specify which port the client should connect to");
     puts("-d debug      If set, prints debug information");
     puts("-h            Shows this dialog");
+}
+
+void run(const char* address, const unsigned short port, const unsigned buffer_size) {
+    client_t client;
+    client_init(&client, address, port);
+    if (send_initial_comunication(&client, buffer_size))
+        puts("Very cool: spotted incoming packet as per request");
+
+    // TODO: fill buffer
+
+
+    // TODO: ask packets, play music
+    client_free(&client);
 }
 
 int main(int argc, char **argv) {
@@ -46,7 +60,7 @@ int main(int argc, char **argv) {
                 }
                 break;
             case 'i':
-                free(server_address);
+                // TODO: gaat dit niet fout?
                 server_address = optarg;
                 break;
             case 'p':
@@ -60,6 +74,6 @@ int main(int argc, char **argv) {
     }
     argc -= optind;
     argv += optind;
-
+    run(server_address, bind_port, buffer_size);
     return 0;
 }

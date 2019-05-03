@@ -1,6 +1,7 @@
 #ifndef CLIENT
 #define CLIENT
 #include <stdint.h>
+#include "client/musicplayer/player.h"
 
 typedef struct {
     unsigned fd;

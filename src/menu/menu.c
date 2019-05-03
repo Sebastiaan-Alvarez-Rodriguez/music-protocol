@@ -11,7 +11,7 @@ bool menu_yes_no(const char* question) {
         puts("");
         if (ans == 'y' || ans == 'Y')
             return true;
-        else if (ans = 'n' || ans == 'N')
+        else if (ans == 'n' || ans == 'N')
             return false;
         else
             puts("Please specify 'y' or 'n'");
