@@ -11,8 +11,8 @@
 
 #include "communication/flags/flags.h"
 #include "server/music/music.h"
-#include "server.h"
-#include "receive.h"
+#include "receive/receive.h"
+#include "send/send.h"
 
 
 // LEGACY CODE BELOW
@@ -87,8 +87,11 @@ void server_run(server_t* const server, unsigned initial_quality) {
     bool running = true;
     struct sockaddr_in client;
     while(running) {
-
-        initial_receive(server);
+        client_info_t* current_client = NULL;
+        receive_from_client(server, &current_client);
+        puts("");
+        if(current_client != NULL)
+            send_to_client(server, current_client);
     }
 }
 
@@ -105,6 +108,6 @@ void print_clients(const server_t* const server) {
     for(unsigned i = 0; i < server->max_clients; ++i) {
         printf("Client[%u] ", i);
         print_client_info(&server->clients[i]);
-        puts("\n");
+        puts("");
     }
 }

@@ -219,6 +219,5 @@ bool receive_com(com_t* const com) {
 }
 
 void free_com(const com_t* const com) {
-    free(com->packet->data);
     free(com->packet);
 }

@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "server.h"
+#include "server/server/server.h"
 
 typedef enum {
     MATCH = 0,
@@ -11,6 +11,6 @@ typedef enum {
     NO_MATCH = 2,
 } search_return;
 
-search_return search_client(server_t* const server, struct sockaddr* address, const client_info_t** current);
+search_return search_client(server_t* const server, struct sockaddr* address, client_info_t** current);
 
 #endif

@@ -1,8 +1,8 @@
-
-#include "client_search.h"
 #include <stdlib.h>
 
-search_return search_client(server_t* const server, struct sockaddr* address, const client_info_t** current) {
+#include "client_search.h"
+
+search_return search_client(server_t* const server, struct sockaddr* address, client_info_t** current) {
     client_info_t* ptr = server->clients;
     struct sockaddr_in* current_addr = (struct sockaddr_in*) address;
     unsigned cli_num = 0;

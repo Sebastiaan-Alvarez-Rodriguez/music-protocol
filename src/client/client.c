@@ -55,26 +55,55 @@ void testconnection(char* server_address, unsigned short bind_port) {
     if((fd = connectServer(bind_port, server_address, &server)) < 0)
         exit(-1);
 
-    com_t comm;
-    com_init(&comm, fd, MSG_CONFIRM, (struct sockaddr*) &server, flags_get_raw(2, FLAG_ACK, FLAG_RR), 0);
+    uint8_t flag = 0;
 
-    char* hello = malloc(27);
-    bzero(hello, 27);
-    char* tmp = hello;
-    for (int i = 0; i < 26; i++) {
-        *tmp = 'a'+i;
-        ++tmp;
-    }
-    *tmp = '\0';
 
-    comm.packet->data = hello;
-    comm.packet->size = 27;
+    com_t init_send;
+    com_init(&init_send, fd, MSG_CONFIRM, (struct sockaddr*) &server, flags_get_raw(1, FLAG_ACK), 0);
 
-    if(!send_com(&comm)) {
+    size_t buf_size = 1024;
+    init_send.packet->data = &buf_size;
+    init_send.packet->size = sizeof(size_t);
+
+    puts("SEND\n");
+    if(!send_com(&init_send)) {
         perror("send_com");
         exit(-1);
     }
-    free_com(&comm);
+
+    com_t init_recv;
+    struct sockaddr_in address;
+    com_init(&init_recv, fd, MSG_WAITALL, (struct sockaddr*) &address, 0, 0);
+
+    puts("\nRECEIVE\n");
+    if(!receive_com(&init_recv)) {
+        perror("receive_com");
+        exit(-1);
+    }
+
+    while(!flags_is_EOS(flag)) {
+
+        com_t send;
+        com_init(&send, fd, MSG_CONFIRM, (struct sockaddr*) &server, flags_get_raw(1, FLAG_ACK), 0);
+        puts("\nSEND\n");
+        if(!send_com(&send)) {
+            perror("send_com");
+            exit(-1);
+        }
+
+        com_t receive;
+        struct sockaddr_in address;
+        com_init(&receive, fd, MSG_WAITALL, (struct sockaddr*) &address, 0, 0);
+
+        puts("\nRECEIVE\n");
+        if(!receive_com(&receive)) {
+            perror("receive_com");
+            exit(-1);
+        }
+
+        free_com(&send);
+        free_com(&receive);
+    }
     close(fd);
     sleep(10);
 }

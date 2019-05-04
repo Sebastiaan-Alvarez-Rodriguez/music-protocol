@@ -27,3 +27,7 @@ inline bool flags_is_REJ(uint8_t rawflags) {
 inline bool flags_is_RR(uint8_t rawflags) {
     return ((rawflags & 0x4) >> 2) == 1;
 }
+
+inline bool flags_is_EOS(uint8_t rawflags) {
+    return ((rawflags & 0x8) >> 3) == 1;
+}
