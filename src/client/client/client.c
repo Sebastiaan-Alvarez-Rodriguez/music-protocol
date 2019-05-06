@@ -15,15 +15,19 @@ static void connect_server(client_t* const client, const char* address, const un
     int socket_fd;
 
     printf("Connecting to server at %s:%u\n", address, port);
-    while (true) {
+    bool retry;
+    do {
+        retry = false;
         if((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
             perror("Socket Creation");
             if (menu_yes_no("Retry?"))
-                continue;
+                retry = true;
             else
                 exit(-1);
         }
-
+    } while (retry);
+    do {
+        retry = false;
         struct sockaddr_in* addr_in = (struct sockaddr_in*) client->sock;
         bzero(addr_in, sizeof(*addr_in));
         addr_in->sin_family = AF_INET;
@@ -32,11 +36,11 @@ static void connect_server(client_t* const client, const char* address, const un
         if(inet_aton(address, &addr_in->sin_addr) == 0) {
             perror("Function inet_aton");
             if (menu_yes_no("Retry?"))
-                continue;
+                retry = true;
             else
                 exit(-1);
         }
-    }
+    } while (retry);
     client->fd = (unsigned) socket_fd;
 }
 
@@ -66,11 +70,23 @@ bool send_initial_comunication(const client_t* const client, const uint16_t buff
     return true;
 }
 
-
 void client_fill_initial_buffer(client_t* const client) {
-    // // Quality
+    // TODO: Fill buffer with batches
     // while (client.player.buffer->buf_free_size() > sizeof(packet))
     //     // Request een batch
+
+}
+
+void client_receive_batch(const client_t* const client) {
+    // TODO Receive batch instead of only 1 packet
+    com_t com;
+    com_init(&com, client->fd, MSG_WAITALL, client->sock, FLAG_NONE, 0);
+
+    receive_com(&com);
+    
+    /*TODO put data in buffer? */
+    
+    free_com(&com);
 
 }
 
