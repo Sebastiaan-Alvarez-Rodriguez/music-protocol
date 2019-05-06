@@ -14,7 +14,7 @@
 static void connect_server(client_t* const client, const char* address, const unsigned short port) {
     int socket_fd;
 
-    printf("Connecting to server at %s:%u", address, port);
+    printf("Connecting to server at %s:%u\n", address, port);
     while (true) {
         if((socket_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
             perror("Socket Creation");
@@ -64,6 +64,14 @@ bool send_initial_comunication(const client_t* const client, const uint16_t buff
     printf("Received an initial packet!");
     free_com(&com);
     return true;
+}
+
+
+void client_fill_initial_buffer(client_t* const client) {
+    // // Quality
+    // while (client.player.buffer->buf_free_size() > sizeof(packet))
+    //     // Request een batch
+
 }
 
 void client_free(client_t* const client) {

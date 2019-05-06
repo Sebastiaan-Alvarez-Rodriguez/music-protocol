@@ -24,7 +24,7 @@ void run(const char* address, const unsigned short port, const unsigned buffer_s
         puts("Very cool: spotted incoming packet as per request");
 
     // TODO: fill buffer
-
+    client_fill_initial_buffer(&client); 
 
     // TODO: ask packets, play music
     client_free(&client);

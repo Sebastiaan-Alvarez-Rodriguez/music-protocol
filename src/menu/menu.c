@@ -4,14 +4,14 @@
 #include "menu.h"
 
 bool menu_yes_no(const char* question) {
-    char ans;
+    char ans[2];
     while (true) {
         printf("%s [Y/n]: ", question);
-        fgets(&ans,1,stdin);
+        fgets(ans,sizeof(ans),stdin);
         puts("");
-        if (ans == 'y' || ans == 'Y')
+        if (ans[0] == 'y' || ans[0] == 'Y')
             return true;
-        else if (ans == 'n' || ans == 'N')
+        else if (ans[0] == 'n' || ans[0] == 'N')
             return false;
         else
             puts("Please specify 'y' or 'n'");
