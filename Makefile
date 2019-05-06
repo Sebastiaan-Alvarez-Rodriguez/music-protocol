@@ -20,7 +20,7 @@ GREEN  = [1;32m
 YELLOW = [1;33m
 WHITE  = [1;37m
 
-xoutofy = $(or $(eval PROCESSED := $(PROCESSED) .),$(info $(WHITE)[$(YELLOW)$(words $(PROCESSED))$(WHITE)/$(YELLOW)$(words $(SRCS) . . )$(WHITE)] $1$(CLEAR)))
+xoutofy = $(or $(eval PROCESSED := $(PROCESSED) .),$(info $(WHITE)[$(YELLOW)$(words $(PROCESSED))$(WHITE)] $1$(CLEAR)))
 
 .PHONY: server client git
 

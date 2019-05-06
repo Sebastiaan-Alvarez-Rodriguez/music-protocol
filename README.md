@@ -18,7 +18,7 @@ We have a server `S` and a client `C`.
 `C` receives the packets of this batch. For a batch, the following may happen on the client side:
  1. Everything okay: take data from buffer and send RR to acknowledge next batch
  2. Packet(s) X and Y received out of order: No problem, perform 1.
- 3. Packet(s) X missing: `C` sends REJ X to `S` after timeout. `S` resends X.
+ 3. Packet(s) X missing: `C` sends REJ X to `S` after timeout. `S` resends X. If multiple packets X ... Y are missing, `C` sends one REJ X ... Y for both items
  4. Packet(s) X checksum mismatch (faulty), treat as missing, then perform 3.
 
 ### Final communication
@@ -27,7 +27,10 @@ communication. If 1. happens, then `S` receives the RR flag after which `S` will
 EOS flag, meaning end of the stream, and close the connection to `C`.
 `S` can then reuse the connection slot for another client. `C` receives the EOS flag
 and will stop asking the server for packets.
-`C` can then successfully clean up and exit, while `S` will wait for the next connection.  
+`C` can then successfully clean up and exit, while `S` will wait for the next connection.
+
+### Quality changes
+`C` determines the quality, by reviewing the amount of dropped/faulty packets and adjusting quality based on that. `C` sends QTY flag, with in the data section
 
 ## Convention visualization
 Here below you can see what a packet looks like when sent/received, and you can find what every field means.
@@ -51,10 +54,11 @@ Please see the explanation of every field below:
 
 ## Flags
 
-Flag | Bit   | Special arg | Meaning
----- | ----- | ----------- | -------------
-None | `0x0` | No args     | No flag
-ACK  | `0x1` | Buffersize  | Ready to receive batch 1
-REJ  | `0x2` | Packetnr    | Reject specified packetnr
-RR   | `0x4` | Batchnr     | Ready to receive next batch
-EOS  | `0x8` | No args     | End of stream
+Flag | Bit    | Special arg | Meaning
+---- | ------ | ----------- | -------------
+None | `0x00` | No args     | No flag
+ACK  | `0x01` | Buffersize  | Ready to receive batch 1
+REJ  | `0x02` | Packetnr    | Reject specified packetnr
+RR   | `0x04` | Batchnr     | Ready to receive next batch
+QTY  | `0x08` | New quality | New quality
+EOS  | `0x10` | No args     | End of stream

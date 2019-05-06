@@ -23,13 +23,17 @@ typedef struct {
 // Initialize a com-struct
 void com_init(com_t* const com, unsigned sockfd, int flags, struct sockaddr* const address, uint8_t packet_flags, uint8_t packetnr);
 
-// Send a udp_packet to destined client
+// Send a packet to destined client
 // Returns true on success, false otherwise (should check errno)
 bool send_com(const com_t* const com);
 
-// Receive a udp_packet from server
+// Receive a packet from server
 // Returns true on success, false otherwise (checksum fail or malloc fail)
 bool receive_com(com_t* const com);
+
+// Wait until a packet from server is received (or timeout)
+// Returns true upon successful receive, false otherwise
+bool receive_peek_com(const com_t* const com);
 
 // Free a given com_t structure
 void free_com(const com_t* const com);
