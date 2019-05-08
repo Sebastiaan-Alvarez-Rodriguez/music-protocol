@@ -15,7 +15,7 @@
 //Raw buffer convention:
 // 0      15 - 16 31 - 32 39 - 40    47 - 48     63 - sizeof(data)-1
 // checksum1 - size  - flags - packetnr - checksum2 - data
-// Total buffer size is 64 + data length, and
+// Total buffer size is 64 + data length
 ///////////////////////////////////////////////////
 
 // Get checksum1 from raw buffer
@@ -148,7 +148,7 @@ void com_init(com_t* const com, unsigned sockfd, int flags, struct sockaddr* con
     packet_init(com->packet, packet_flags, packetnr);
 }
 
-bool send_com(const com_t* const com) {
+bool com_send(const com_t* const com) {
     void* buf = NULL;
     uint16_t size = 0;
     if (!convert_send(&buf, &size, com->packet)) {
@@ -171,7 +171,7 @@ bool send_com(const com_t* const com) {
     return ret;
 }
 
-bool receive_com(com_t* const com) {
+bool com_receive(com_t* const com) {
     void* check_buf = malloc(sizeof(uint16_t)*4);
     if (check_buf == NULL || errno == ENOMEM)
         return false;
@@ -226,12 +226,12 @@ bool receive_com(com_t* const com) {
     return true;
 }
 
-bool receive_peek_com(const com_t* const com) {
+bool com_receive_peek(const com_t* const com) {
     // TODO: Add timeout!
     // TODO: Check: Gaat alles goed als ik het zo doe?
     return recvfrom(com->sockfd, NULL, 0, MSG_PEEK, NULL, 0) < 0;
 }
 
-void free_com(const com_t* const com) {
+void com_free(const com_t* const com) {
     free(com->packet);
 }

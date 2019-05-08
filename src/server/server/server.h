@@ -29,8 +29,8 @@ bool server_set_port(server_t* const server, unsigned short port);
 // Returns true on successful allocation, false otherwise
 bool server_set_num_clients(server_t* const server, const unsigned max_clients);
 
-// Run a given server_t, with given initial quality
-void server_run(server_t* const server, unsigned initial_quality);
+// Run a given server_t
+void server_run(server_t* const server);
 
 // Free server memory allocations
 void server_free(server_t* const server);

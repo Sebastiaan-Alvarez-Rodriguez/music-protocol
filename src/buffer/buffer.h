@@ -20,37 +20,40 @@ typedef struct {
     size_t elem_size; //size of one element in buffer
     size_t max;       //amount of elements that could be stored
     bool full;
-} buffer;
+} buffer_t;
 
 // Make a buffer with (elem_max+1)*elem_size bytes
 // Returns true on success, false otherwise
-bool buf_init(buffer* const buf, size_t max_elems, size_t elem_size);
+bool buffer_init(buffer_t* const buf, size_t max_elems, size_t elem_size);
 
 // Resets a buffer (making it empty)
-void buf_reset(buffer* const buf);
+void buffer_reset(buffer_t* const buf);
 
 // Adds an element 'data' to the buffer (data must have correct size!)
 // Returns true on success, false otherwise
-bool buf_add(buffer* const buf, void* data, bool override);
+bool buffer_add(buffer_t* const buf, void* data, bool override);
 
-//Returns pointer to element at specified index
-void* buf_read(const buffer* const buf, size_t index);
+// Returns pointer to element at specified index
+void* buffer_read(const buffer_t* const buf, size_t index);
+
+// Returns one element from the ringbuffer, then removes element
+void* buffer_get(buffer_t* const buf);
 
 // Returns amount of elements used in buffer
-size_t buf_used_size(const buffer* const buf);
+size_t buffer_used_size(const buffer_t* const buf);
 
-// Returns current amount of free space
-size_t buf_free_size(const buffer* const buf);
+// Returns current amount (of elements) of free space
+size_t buffer_free_size(const buffer_t* const buf);
 
 // Returns true if buffer is empty, false otherwise
-bool buf_empty(const buffer* const buf);
+bool buffer_empty(const buffer_t* const buf);
 
 // Returns true if buffer is full, false otherwise
-bool buf_full(const buffer* const buf);
+bool buffer_full(const buffer_t* const buf);
 
 // Returns maximum capacity buffer can hold
-size_t buf_capacity(const buffer* const buf);
+size_t buffer_capacity(const buffer_t* const buf);
 
-void buf_free(const buffer* buf);
+void buffer_free(const buffer_t* const buf);
 
 #endif

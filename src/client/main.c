@@ -3,7 +3,10 @@
 #include <stdlib.h>
 #include <getopt.h>
 
+#include "client/client/receive/receive.h"
 #include "client/client/client.h"
+#include "client/musicplayer/player.h"
+#include "communication/constants/constants.h"
 
 static void showHelp(const char *prog_name) {
     puts(prog_name);
@@ -17,33 +20,40 @@ static void showHelp(const char *prog_name) {
     puts("-h            Shows this dialog");
 }
 
-void run(const char* address, const unsigned short port, const unsigned buffer_size) {
+void run(const char* address, const unsigned short port, const unsigned buffer_size, const unsigned initial_quality) {
     client_t client;
-    client_init(&client, address, port);
-    if (send_initial_comunication(&client, buffer_size))
-        puts("Very cool: spotted incoming packet as per request");
-
-    // TODO: fill buffer
+    client_init(&client, address, port, buffer_size, initial_quality);
     client_fill_initial_buffer(&client); 
+    puts("Buffer filled!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
-    // TODO: ask packets, play music
+    while(!client.EOS_received) {
+        //While we cannot receive another full batch, play/buffer some music to make space
+        while (buffer_free_size(client.player->buffer) < constants_batch_packets_amount(client.quality))
+            player_play(client.player);
+        // Here, we can receive another batch to fill up buffer again
+        receive_batch(&client);
+    }
+    // Play the last buffered music
+    while (!buffer_empty(client.player->buffer))
+        player_play(client.player);
+
     client_free(&client);
 }
 
 int main(int argc, char **argv) {
     const char* const prog_name = argv[0];
     unsigned buffer_size = 1024;
-    unsigned quality = 5;
+    unsigned initial_quality = 3;
     char* server_address = "127.0.0.1";
     unsigned short bind_port = 1235;
 
     char c;
-    while ((c = getopt(argc, argv, "b:q:i:p:dh")) != -1){
+    while ((c = getopt(argc, argv, "b:q:i:p:h")) != -1){
         switch (c) {
             case 'b':
                 if (*optarg >= '1') {
                     buffer_size = atoi(optarg);
-                    printf("Buffersize set to %i\n", buffer_size);
+                    printf("Buffersize set to %u\n", buffer_size);
                 } else {
                     puts("Provide a bufferspace >= 1");
                     return -1;
@@ -51,8 +61,8 @@ int main(int argc, char **argv) {
                 break;
             case 'q':
                 if (*optarg >= '1' && *optarg <= '5') {
-                    quality = atoi(optarg);
-                    printf("Quality set to %i\n", quality);
+                    initial_quality = atoi(optarg);
+                    printf("Quality set to %u\n", initial_quality);
                 }
                 else {
                     puts("Your quality level must be within [1-5]");
@@ -60,7 +70,7 @@ int main(int argc, char **argv) {
                 }
                 break;
             case 'i':
-                // TODO: gaat dit niet fout?
+                // TODO: gaat dit niet fout? (memory leaks?)
                 server_address = optarg;
                 break;
             case 'p':
@@ -74,6 +84,6 @@ int main(int argc, char **argv) {
     }
     argc -= optind;
     argv += optind;
-    run(server_address, bind_port, buffer_size);
+    run(server_address, bind_port, buffer_size, initial_quality);
     return 0;
 }

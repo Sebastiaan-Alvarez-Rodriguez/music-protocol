@@ -24,11 +24,11 @@ static bool prepare_packet(server_t* const server, com_t* const send, client_inf
 }
 
 
-static bool intermediate_send(server_t* const server, com_t* const send, client_info_t* const client, const size_t packet_nr) {
+static bool send_intermediate(server_t* const server, com_t* const send, client_info_t* const client, const size_t packet_nr) {
     return prepare_packet(server, send, client, client->music_chuck_size, packet_nr);
 }
 
-static bool final_send(server_t* const server, com_t* const send, client_info_t* const client, const size_t packet_nr) {
+static bool send_final(server_t* const server, com_t* const send, client_info_t* const client, const size_t packet_nr) {
     size_t bytes_to_send = client->music_chuck_size;
     if(client->bytes_sent + client->music_chuck_size > server->mf->payload_size) {
         printf("%u + %lu > %u\n", client->bytes_sent, client->music_chuck_size, server->mf->payload_size);
@@ -42,11 +42,11 @@ static bool final_send(server_t* const server, com_t* const send, client_info_t*
 static bool send_packet(server_t* const server, com_t* const send, client_info_t* const current, const unsigned packet_nr) {
     switch(current->stage) {
         case INTERMEDIATE:
-            if(!intermediate_send(server, send, current, packet_nr))
+            if(!send_intermediate(server, send, current, packet_nr))
                 return false;
             break;
         case FINAL:
-            if(!final_send(server, send, current, packet_nr))
+            if(!send_final(server, send, current, packet_nr))
                 return false;
             break;
         default:
@@ -54,7 +54,7 @@ static bool send_packet(server_t* const server, com_t* const send, client_info_t
             return false;
     }
 
-    if(!send_com(send))
+    if(!com_send(send))
         return false;
     puts("");
     return true;
@@ -88,6 +88,6 @@ bool send_to_client(server_t* const server, com_t* const receive, client_info_t*
     else
         retval = resend_faulty(server, receive, &send, current);
 
-    free_com(&send);
+    com_free(&send);
     return retval;
 }

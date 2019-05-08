@@ -14,32 +14,6 @@
 #include "receive/receive.h"
 #include "send/send.h"
 
-
-// LEGACY CODE BELOW
-// /* Runs a server that listens on given port for connections*/
-// int runServer(const server_t* const server) {
-
-//     while(true) {
-//         com_t com;
-//         struct sockaddr_in client;
-//         bzero(&client, sizeof(client));
-//         com_init(&com, server->portsockfd, MSG_WAITALL, (struct sockaddr*) &client, FLAG_NONE, 0);
-
-//         //TODO send stuff to client
-//         receive_com(&com);
-
-//         char* received = malloc(com.packet->size);
-//         memcpy(received, com.packet->data, com.packet->size);
-//         printf("Received: %s\n", received);
-//         puts("Connection closed");
-//         free(received);
-//         free_com(&com);
-//         sleep(10);
-//     }
-
-//     return sockfd;
-// }
-
 void server_init(server_t* const server) {
     server->port = 0;
     server->mf = NULL;
@@ -83,7 +57,7 @@ bool server_set_num_clients(server_t* const server, const unsigned max_clients) 
     return true;
 }
 
-void server_run(server_t* const server, unsigned initial_quality) {
+void server_run(server_t* const server) {
     bool running = true;
     struct sockaddr_in client;
     while(running) {
@@ -93,7 +67,7 @@ void server_run(server_t* const server, unsigned initial_quality) {
         puts("");
         if(current_client != NULL)
             send_to_client(server, &receive, current_client);
-        free_com(&receive);
+        com_free(&receive);
     }
 }
 

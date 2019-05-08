@@ -15,7 +15,7 @@
 static bool receive_and_check(server_t* const server, com_t* const receive, client_info_t** current) {
     struct sockaddr_in client_address;
     com_init(receive, server->fd, MSG_WAITALL, (struct sockaddr*) &client_address, 0, 0);
-    if (!receive_com(receive))
+    if (!com_receive(receive))
         return false;
 
     client_info_t* client = NULL;
@@ -43,8 +43,8 @@ static bool receive_and_check(server_t* const server, com_t* const receive, clie
 
 // Processes an initial request from the client
 // TODO change batchsize
-static bool initial_receive(const com_t* const receive, client_info_t* const client) {
-    puts("initial_receive");
+static bool receive_initial(const com_t* const receive, client_info_t* const client) {
+    puts("receive_initial");
     if(!flags_is_ACK(receive->packet->flags))
         return false;
 
@@ -66,7 +66,7 @@ static bool initial_receive(const com_t* const receive, client_info_t* const cli
 
 // Processes an intermediate request from the client
 // TODO change batchsize
-static bool intermediate_receive(server_t* const server, com_t* const receive, client_info_t* const client) {
+static bool receive_intermediate(server_t* const server, com_t* const receive, client_info_t* const client) {
     if(flags_is_RR(receive->packet->flags)) {
         client->music_ptr += client->packets_per_batch * client->music_chuck_size;
         client->packets_per_batch = 32;
@@ -82,7 +82,7 @@ static bool intermediate_receive(server_t* const server, com_t* const receive, c
     return true;
 }
 
-static void final_receive(com_t* const receive, client_info_t* const client) {
+static void receive_final(com_t* const receive, client_info_t* const client) {
     if(flags_is_RR(receive->packet->flags)) {
         client->in_use = false;
     }
@@ -99,15 +99,15 @@ bool receive_from_client(server_t* const server, com_t* const receive, client_in
 
     switch (client->stage) {
         case INITIAL:
-            if(!initial_receive(receive, client))
+            if(!receive_initial(receive, client))
                 return false;
             break;
         case INTERMEDIATE:
-            if(!intermediate_receive(server, receive, client))
+            if(!receive_intermediate(server, receive, client))
                 return false;
             break;
         case FINAL:
-            final_receive(receive, client);
+            receive_final(receive, client);
             break;
         default:
             return false;
