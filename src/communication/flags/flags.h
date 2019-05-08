@@ -6,8 +6,9 @@ enum flags {
     FLAG_NONE= 0x0,
     FLAG_ACK = 0x1,
     FLAG_REJ = 0x2,
-    FLAG_RR  = 0x4
-}; 
+    FLAG_RR  = 0x4,
+    FLAG_EOS = 0x8
+};
 // Acknowledge
 // Ready to Receive
 // Reject all remaining frames
@@ -23,4 +24,6 @@ bool flags_is_ACK(uint8_t rawflags);
 bool flags_is_REJ(uint8_t rawflags);
 
 bool flags_is_RR(uint8_t rawflags);
+
+bool flags_is_EOS(uint8_t rawflags);
 #endif

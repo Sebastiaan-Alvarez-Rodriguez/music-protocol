@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include "buffer/buffer.h"
 #include "player.h"
 
@@ -6,7 +7,7 @@
 #define BLOCK_SIZE 1024
 #define FRAME_SIZE 4
 
-// Returns whether 
+// Returns whether
 static bool player_open_audio_device(player_t* const player) {
     int err = 0;
     if ((err = snd_pcm_open(&(player->snd_handle), "default", SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
