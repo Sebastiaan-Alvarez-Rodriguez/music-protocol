@@ -61,7 +61,7 @@ static inline const void* buf_get_data(const void* const buf) {
 static inline uint16_t make_checksum1(uint16_t sizefield, uint8_t flags, uint8_t packetnr, uint16_t checksum2field) {
     uint16_t buf[3];
     buf[0] = sizefield;
-    buf[1] = (flags << 8) | packetnr;
+    buf[1] = (packetnr << 8) | flags;
     buf[2] = checksum2field;
     return generate_16bit_fletcher(buf, sizeof(buf));
 }
@@ -91,7 +91,7 @@ static bool convert_send(void** buf, uint16_t* const size, const packet_t* const
     ++pointer;                       // Move to size field
     *pointer = packet->size;         // Write size field
     ++pointer;                       // Move to flags field
-    *pointer = packet->flags;        // Write flags field
+    *pointer = ((packet->nr << 8) | packet->flags);  // Write flags & packet_nr field
     ++pointer;                       // Move to checksum2 field
     *pointer = checksum2;            // Write checksum2 field
     ++pointer;                       // Move to data field
@@ -161,6 +161,7 @@ bool send_com(const com_t* const com) {
     printf("Size data: %u\n", com->packet->size);
     printf("Size other: %u\n", size - com->packet->size);
     printf("flags: %#2x\n", com->packet->flags);
+    printf("packet nr: %u\n", com->packet->nr);
     printf("Raw data:"); print_hex(size, buf);
 
     bool ret = sendto(com->sockfd, buf, size, com->flags, com->address, com->addr_len) >= 0;
@@ -183,14 +184,21 @@ bool receive_com(com_t* const com) {
     uint8_t flags = buf_get_flags(check_buf);
     uint8_t packetnr = buf_get_packetnr(check_buf);
     uint16_t checksum2 = buf_get_checksum2(check_buf);
-    free(check_buf);
 
     //Checksum control for checksum 1
     uint16_t test_checksum1 = make_checksum1(size, flags, packetnr, checksum2);
     if (checksum1 != test_checksum1) {
-        printf("Checksum1 mismatch! Expected %#8X, got %#8X", checksum1, test_checksum1);
+        printf("checksum1: %#8x\n", checksum1);
+        printf("size: %u\n", size);
+        printf("flags: %u\n", flags);
+        printf("packetnr: %u\n", packetnr);
+        printf("checksum2: %#8x\n", checksum2);
+        printf("header: "); print_hex(size, check_buf);
+        free(check_buf);
+        printf("Checksum1 mismatch! Expected %#8X, got %#8X\n", checksum1, test_checksum1);
         return false;
     }
+    free(check_buf);
 
     //Get all received data
     void* full_data = malloc(sizeof(uint16_t)*4+size);

@@ -87,11 +87,13 @@ void server_run(server_t* const server, unsigned initial_quality) {
     bool running = true;
     struct sockaddr_in client;
     while(running) {
+        com_t receive;
         client_info_t* current_client = NULL;
-        receive_from_client(server, &current_client);
+        receive_from_client(server, &receive, &current_client);
         puts("");
         if(current_client != NULL)
-            send_to_client(server, current_client);
+            send_to_client(server, &receive, current_client);
+        free_com(&receive);
     }
 }
 

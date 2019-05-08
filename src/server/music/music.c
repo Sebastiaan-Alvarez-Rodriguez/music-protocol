@@ -48,7 +48,7 @@ static bool music_file_open(music_file* mf, const char* const filename) {
         if (strncmp((char*) p, "data", 4))
             break;
 
-        mf->samples = p + 8;
+        mf->samples = p;
         mf->payload_size = *size;
         p += 8 + *size;
     } while (strncmp((char*) p, "data", 4) && (uint32_t) (((uint8_t*) p) - (uint8_t*) mf->data) < statbuf.st_size);

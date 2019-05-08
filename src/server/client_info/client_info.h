@@ -16,18 +16,20 @@ typedef enum {
     FINAL
 } stage_t;
 
+
+
 typedef struct {
    struct sockaddr_in client_addr;
 
    stage_t stage;
 
    unsigned in_use : 1;
-   unsigned batch_nr : 8;
-   unsigned packet_nr : 8;
+   unsigned batch_ready : 1;
    unsigned current_q_level : 4;
 
    struct timeval timeout_timer;
 
+   bool resend_packets;
    uint32_t bytes_sent;
    size_t packets_per_batch;
 

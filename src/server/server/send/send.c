@@ -1,63 +1,93 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 
 #include "send.h"
+#include "communication/flags/flags.h"
 #include "server/client_info/client_info.h"
 
-static bool send_packet(com_t* const send) {
-    if(!send_com(send))
-        return false;
-    return true;
-}
-
-static bool prepare_packet(com_t* const send, client_info_t* const client, const unsigned packet_nr) {
+static bool prepare_packet(server_t* const server, com_t* const send, client_info_t* const client, size_t bytes_to_send, const size_t packet_nr) {
     uint8_t* music_ptr = get_music_chunk(client, packet_nr);
     if(music_ptr == NULL)
         return false;
 
     send->packet->data = music_ptr;
-    send->packet->size = client->music_chuck_size;
+    send->packet->size = bytes_to_send;
     send->packet->nr = packet_nr;
-    client->bytes_sent += client->music_chuck_size;
-    client->stage = INTERMEDIATE;
+    client->bytes_sent += bytes_to_send;
 
-    printf("Bytes sent: %lu\n", client->music_chuck_size);
+    printf("Bytes sent: %lu\n", bytes_to_send);
     printf("Total bytes sent: %u\n", client->bytes_sent);
+    printf("WAV file size: %u\n", server->mf->payload_size);
     return true;
 }
 
 
-static bool initial_send(com_t* const send, client_info_t* const client) {
-    return prepare_packet(send, client, 0);
+static bool intermediate_send(server_t* const server, com_t* const send, client_info_t* const client, const size_t packet_nr) {
+    return prepare_packet(server, send, client, client->music_chuck_size, packet_nr);
 }
 
-static bool intermediate_send(com_t* const send, client_info_t* const client) {
-    return prepare_packet(send, client, ++client->packet_nr);
+static bool final_send(server_t* const server, com_t* const send, client_info_t* const client, const size_t packet_nr) {
+    size_t bytes_to_send = client->music_chuck_size;
+    if(client->bytes_sent + client->music_chuck_size > server->mf->payload_size) {
+        printf("%u + %lu > %u\n", client->bytes_sent, client->music_chuck_size, server->mf->payload_size);
+        bytes_to_send = server->mf->payload_size - client->bytes_sent;
+    }
+    if(!client->in_use)
+        send->packet->flags |= FLAG_EOS;
+    return prepare_packet(server, send, client, bytes_to_send, packet_nr);
 }
 
-bool send_to_client(server_t* const server, client_info_t* const current) {
-    com_t send;
-    com_init(&send, server->fd, MSG_CONFIRM, (struct sockaddr*) &current->client_addr, 0, 0);
-
+static bool send_packet(server_t* const server, com_t* const send, client_info_t* const current, const unsigned packet_nr) {
     switch(current->stage) {
-        case INITIAL:
-            if(!initial_send(&send, current))
-                return false;
-            break;
         case INTERMEDIATE:
-            if(!intermediate_send(&send, current))
+            if(!intermediate_send(server, send, current, packet_nr))
                 return false;
             break;
         case FINAL:
+            if(!final_send(server, send, current, packet_nr))
+                return false;
             break;
         default:
             errno = EINVAL;
             return false;
     }
 
-    if(!send_packet(&send))
+    if(!send_com(send))
         return false;
-    // free_com(&send);
+    puts("");
     return true;
+}
+
+static bool send_batch(server_t* const server, com_t* const send, client_info_t* const current) {
+    bool retval = true;
+    for(unsigned i = 0; i < current->packets_per_batch; ++i) {
+        retval &= send_packet(server, send, current, i);
+    }
+    return true;
+}
+
+static bool resend_faulty(server_t* const server, com_t* const receive, com_t* const send, client_info_t* const current) {
+    uint16_t* faulty_ptr = (uint16_t*) receive->packet->data;
+    bool retval = true;
+    for(unsigned i = 0; i < current->packets_per_batch && faulty_ptr; ++i) {
+        retval &= send_packet(server, send, current, *faulty_ptr);
+        faulty_ptr++;
+    }
+    return true;
+}
+
+bool send_to_client(server_t* const server, com_t* const receive, client_info_t* const current) {
+    com_t send;
+    com_init(&send, server->fd, MSG_CONFIRM, (struct sockaddr*) &current->client_addr, 0, 0);
+
+    bool retval = false;
+    if(!current->resend_packets)
+        retval = send_batch(server, &send, current);
+    else
+        retval = resend_faulty(server, receive, &send, current);
+
+    free_com(&send);
+    return retval;
 }
