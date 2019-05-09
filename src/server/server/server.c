@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include "task/task.h"
 #include "communication/flags/flags.h"
 #include "server/music/music.h"
 #include "receive/receive.h"
@@ -62,11 +63,13 @@ void server_run(server_t* const server) {
     struct sockaddr_in client;
     while(running) {
         com_t receive;
+        task_t task;
         client_info_t* current_client = NULL;
-        receive_from_client(server, &receive, &current_client);
-        puts("");
+
+        receive_from_client(server, &receive, &current_client, &task);
+        printf("%d\n", task.type);
         if(current_client != NULL)
-            send_to_client(server, &receive, current_client);
+            send_to_client(server, current_client, &task);
         com_free(&receive);
     }
 }

@@ -1,16 +1,17 @@
 #include <stdlib.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <string.h>
 
 #include "client_info.h"
 
-void client_info_init(client_info_t* client, const com_t* const com) {
-    client->in_use = 1;
+void client_info_init(client_info_t* client, const com_t* const com, const void* const music_data) {
+    client->in_use = true;
     memcpy(&client->client_addr, com->address, sizeof(struct sockaddr));
-    client->batch_ready = 0;
-    client->packets_per_batch = 0;
+    client->batch_ready = false;
     client->current_q_level = 5;
+    client->music_ptr = music_data;
     client->stage = INITIAL;
 }
 

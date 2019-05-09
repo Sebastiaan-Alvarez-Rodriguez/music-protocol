@@ -23,7 +23,7 @@ static void showHelp(const char *prog_name) {
 void run(const char* address, const unsigned short port, const unsigned buffer_size, const unsigned initial_quality) {
     client_t client;
     client_init(&client, address, port, buffer_size, initial_quality);
-    client_fill_initial_buffer(&client); 
+    client_fill_initial_buffer(&client);
     puts("Buffer filled!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
     while(!client.EOS_received) {
@@ -43,7 +43,7 @@ void run(const char* address, const unsigned short port, const unsigned buffer_s
 int main(int argc, char **argv) {
     const char* const prog_name = argv[0];
     unsigned buffer_size = 1024;
-    unsigned initial_quality = 3;
+    uint8_t initial_quality = 3;
     char* server_address = "127.0.0.1";
     unsigned short bind_port = 1235;
 

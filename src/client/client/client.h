@@ -9,7 +9,7 @@ typedef struct {
     unsigned fd;
     struct sockaddr* sock;
     player_t* player;
-    unsigned quality;
+    uint8_t quality;
 
     unsigned batch_nr;
     bool EOS_received;

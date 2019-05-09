@@ -43,12 +43,12 @@ bool receive_ACK(const client_t* const client, bool consume) {
     com_t com;
     com_init(&com, client->fd, consume ? MSG_WAITALL : MSG_PEEK, client->sock, FLAG_NONE, 0);
     com_receive(&com);
-    return flags_is_ACK(com.flags);
+    return flags_is_ACK(com.packet->flags);
 }
 
 bool receive_EOS(const client_t* const client, bool consume) {
     com_t com;
     com_init(&com, client->fd, consume ? MSG_WAITALL : MSG_PEEK, client->sock, FLAG_NONE, 0);
     com_receive(&com);
-    return flags_is_EOS(com.flags);
+    return flags_is_EOS(com.packet->flags);
 }
