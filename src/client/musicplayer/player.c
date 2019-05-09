@@ -15,10 +15,8 @@ static void player_open_audio_device(player_t* const player) {
     do {
         if ((err = snd_pcm_open(&(player->snd_handle), "default", SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
             printf("couldnt open audio device: %s\n", snd_strerror(err));
-            if (!menu_yes_no("Retry?")) {
-                player_free(player);
+            if (!menu_yes_no("Retry?"))
                 exit(-1);
-            }
         }
     } while (err < 0);
 

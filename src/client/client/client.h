@@ -11,7 +11,7 @@ typedef struct {
     player_t* player;
     uint8_t quality;
 
-    unsigned batch_nr;
+    uint32_t batch_nr;
     bool EOS_received;
 } client_t;
 

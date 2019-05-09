@@ -24,9 +24,9 @@ void run(const char* address, const unsigned short port, const unsigned buffer_s
     client_t client;
     client_init(&client, address, port, buffer_size, initial_quality);
     client_fill_initial_buffer(&client);
-    puts("Buffer filled!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
 
     while(!client.EOS_received) {
+        printf(".");
         //While we cannot receive another full batch, play/buffer some music to make space
         while (buffer_free_size(client.player->buffer) < constants_batch_packets_amount(client.quality))
             player_play(client.player);
@@ -54,6 +54,7 @@ int main(int argc, char **argv) {
                 if (*optarg >= '1') {
                     buffer_size = atoi(optarg);
                     printf("Buffersize set to %u\n", buffer_size);
+                    buffer_size *= 1024;
                 } else {
                     puts("Provide a bufferspace >= 1");
                     return -1;

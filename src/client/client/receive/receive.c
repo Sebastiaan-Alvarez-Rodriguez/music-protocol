@@ -11,9 +11,10 @@
 void receive_batch(client_t* const client) {
     // Request batch
     send_RR(client);
-    if (receive_EOS(client, false))
+    if (receive_EOS(client, false)) {
         client->EOS_received = true;
-    return;
+        return;
+    }
     // Receive batch and temporarily store in buf
     uint8_t* buf = malloc(constants_batch_packets_amount(client->quality) * constants_packets_size());
     for (unsigned i = 0; i < constants_batch_packets_amount(client->quality); ++i) {
@@ -32,7 +33,7 @@ void receive_batch(client_t* const client) {
     // Place received data in player buffer
     for (unsigned i = 0; i < constants_batch_packets_amount(client->quality); ++i) {
         uint8_t* buf_ptr = buf + i * constants_packets_size();
-        buffer_add(client->player->buffer, buf_ptr, constants_packets_size());
+        buffer_add(client->player->buffer, buf_ptr, true);
     }
     free(buf);
     // batch received with success. Next time, ask next batch

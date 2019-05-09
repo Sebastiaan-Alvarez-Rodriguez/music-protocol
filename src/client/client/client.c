@@ -71,8 +71,18 @@ void client_init(client_t* const client, const char* address, const unsigned sho
 
 
 void client_fill_initial_buffer(client_t* const client) {
-    while (!client->EOS_received && buffer_free_size(client->player->buffer) >= constants_batch_packets_amount(client->quality))
+    puts("Filling initial buffer...");
+    while (!client->EOS_received && buffer_free_size(client->player->buffer) >= constants_batch_packets_amount(client->quality)) {
         receive_batch(client);
+        printf("%lu%c\n", (buffer_used_size(client->player->buffer)*100) / buffer_capacity(client->player->buffer), '%');
+        // printf("client want batchnr: %i\n", client->batch_nr);
+        // printf("%lu >= %lu: %i\n", buffer_free_size(client->player->buffer), constants_batch_packets_amount(client->quality), buffer_free_size(client->player->buffer) >= constants_batch_packets_amount(client->quality));
+        // printf("Buf free: %lu\n", buffer_free_size(client->player->buffer));
+        // printf("Buf used: %lu\n", buffer_used_size(client->player->buffer));
+        // printf("Buf  cap: %lu\n", buffer_capacity(client->player->buffer));
+        // sleep(3);
+    }
+    printf("client EOS received: %i\n", client->EOS_received);
 }
 
 void client_free(client_t* const client) {

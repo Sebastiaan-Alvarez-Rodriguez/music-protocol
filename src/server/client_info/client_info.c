@@ -6,7 +6,7 @@
 
 #include "client_info.h"
 
-void client_info_init(client_info_t* client, const com_t* const com, const void* const music_data) {
+void client_info_init(client_info_t* const client, const com_t* const com, void* music_data) {
     client->in_use = true;
     memcpy(&client->client_addr, com->address, sizeof(struct sockaddr));
     client->batch_ready = false;

@@ -83,9 +83,6 @@ static bool convert_send(void** buf, uint16_t* const size, const packet_t* const
     uint16_t checksum2 = make_checksum2(packet->data, packet->size);
     uint16_t checksum1 = make_checksum1(packet->size, packet->flags, packet->nr, checksum2);
 
-    printf("Checksum2: %#8x\n", checksum2);
-    printf("Checksum1: %#8x\n", checksum1);
-
     uint16_t* pointer = *buf;
     *pointer = checksum1;            // Write checksum1 field
     ++pointer;                       // Move to size field
@@ -155,14 +152,15 @@ bool com_send(const com_t* const com) {
         perror("convert_send");
         return false;
     }
-
-    printf("Sending %p\n", buf);
-    printf("Size: %u\n", size);
-    printf("Size data: %u\n", com->packet->size);
-    printf("Size other: %u\n", size - com->packet->size);
-    printf("flags: %#2x\n", com->packet->flags);
-    printf("packet nr: %u\n", com->packet->nr);
-    printf("Raw data:"); print_hex(size, buf);
+    
+    // puts("-----SEND-----");
+    // printf("Size: %u\n", size);
+    // printf("Size data: %u\n", com->packet->size);
+    // printf("Size other: %u\n", size - com->packet->size);
+    // printf("flags: %#2x\n", com->packet->flags);
+    // printf("packet nr: %u\n", com->packet->nr);
+    // printf("Raw data:"); print_hex(size, buf);
+    // puts("--------------");
 
     bool ret = sendto(com->sockfd, buf, size, com->flags, com->address, com->addr_len) >= 0;
     free(buf);
@@ -188,12 +186,6 @@ bool com_receive(com_t* const com) {
     //Checksum control for checksum 1
     uint16_t test_checksum1 = make_checksum1(size, flags, packetnr, checksum2);
     if (checksum1 != test_checksum1) {
-        printf("checksum1: %#8x\n", checksum1);
-        printf("size: %u\n", size);
-        printf("flags: %u\n", flags);
-        printf("packetnr: %u\n", packetnr);
-        printf("checksum2: %#8x\n", checksum2);
-        printf("header: "); print_hex(size, check_buf);
         free(check_buf);
         printf("Checksum1 mismatch! Expected %#8X, got %#8X\n", checksum1, test_checksum1);
         return false;
@@ -207,13 +199,6 @@ bool com_receive(com_t* const com) {
     if(recvfrom(com->sockfd, full_data, sizeof(uint16_t)*4+size, com->flags, com->address, &com->addr_len) < 0)
         return false;
 
-    printf("Received %p\n", full_data);
-    printf("Size: %lu\n", sizeof(uint16_t)*4+size);
-    printf("Size data: %u\n", size);
-    printf("Size other: %lu\n", sizeof(uint16_t)*4);
-    puts("Raw data:");
-    print_hex(sizeof(uint16_t)*4+size, full_data);
-
     //Checksum control for checksum2
     uint16_t test_checksum2 = make_checksum2(buf_get_data(full_data), size);
     if (checksum2 != test_checksum2) {
@@ -223,6 +208,16 @@ bool com_receive(com_t* const com) {
 
     convert_recv(com->packet, full_data, size, flags, packetnr);
     free(full_data);
+
+    // puts("-----RECV-----");
+    // printf("Size: %lu\n", com->packet->size + sizeof(uint16_t)*4);
+    // printf("Size data: %u\n", com->packet->size);
+    // printf("Size other: %lu\n", sizeof(uint16_t)*4);
+    // printf("flags: %#2x\n", com->packet->flags);
+    // printf("packet nr: %u\n", packetnr);
+    // printf("Raw data:"); print_hex(com->packet->size + sizeof(uint16_t)*4, com->packet);
+    // puts("--------------");
+
     return true;
 }
 
