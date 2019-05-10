@@ -152,7 +152,7 @@ bool com_send(const com_t* const com) {
         perror("convert_send");
         return false;
     }
-    
+
     // puts("-----SEND-----");
     // printf("Size: %u\n", size);
     // printf("Size data: %u\n", com->packet->size);

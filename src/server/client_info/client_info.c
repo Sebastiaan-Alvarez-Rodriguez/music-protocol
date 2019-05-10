@@ -10,7 +10,6 @@ void client_info_init(client_info_t* const client, const com_t* const com, void*
     client->in_use = true;
     memcpy(&client->client_addr, com->address, sizeof(struct sockaddr));
     client->batch_ready = false;
-    client->current_q_level = 5;
     client->music_ptr = music_data;
     client->stage = INITIAL;
 }

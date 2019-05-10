@@ -61,7 +61,7 @@ static bool process_initial(server_t* const server, com_t* const receive, client
     }
     else if(flags_is_RR(receive->packet->flags)) {
         client->stage = INTERMEDIATE;
-        process_intermediate(server, receive, client, task);
+        task->type = SEND_BATCH;
         retval = true;
     }
     return retval;
@@ -76,6 +76,10 @@ static void process_intermediate(server_t* const server, com_t* const receive, c
         task->type = SEND_BATCH;
         client->music_ptr += client->packets_per_batch * client->music_chuck_size;
         client->packets_per_batch = constants_batch_packets_amount(client->current_q_level);
+        puts("RR\n");
+        printf("Bytes sent: %u\n", client->bytes_sent);
+        printf("Total Bytes: %u\n", server->mf->payload_size);
+        printf("Batch size: %lu\n", client->packets_per_batch * client->music_chuck_size);
         if(client->bytes_sent + (client->packets_per_batch * client->music_chuck_size) >= server->mf->payload_size)
             client->stage = FINAL;
     }
