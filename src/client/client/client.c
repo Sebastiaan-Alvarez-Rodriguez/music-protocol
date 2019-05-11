@@ -32,7 +32,7 @@ static void connect_server(client_t* const client, const char* address, const un
     do {
         retry = false;
         struct sockaddr_in* addr_in = (struct sockaddr_in*) client->sock;
-        bzero(addr_in, sizeof(*addr_in));
+        // bzero(addr_in, sizeof(struct sockaddr));
         addr_in->sin_family = AF_INET;
         addr_in->sin_port = htons(port);
 
@@ -82,7 +82,6 @@ void client_fill_initial_buffer(client_t* const client) {
         // printf("Buf  cap: %lu\n", buffer_capacity(client->player->buffer));
         // sleep(3);
     }
-    printf("client EOS received: %i\n", client->EOS_received);
 }
 
 void client_free(client_t* const client) {

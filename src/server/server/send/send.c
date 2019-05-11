@@ -93,7 +93,7 @@ bool send_to_client(server_t* const server, client_info_t* const current, const 
             retval &= send_flags(&send, FLAG_EOS);
             break;
         case SEND_BATCH:
-            retval &= send_batch(   server, &send, current);
+            retval &= send_batch(server, &send, current);
             break;
         case SEND_FAULTY:
             retval &= send_faulty(server, &send, current, task);

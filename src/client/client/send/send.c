@@ -34,11 +34,12 @@ void send_RR(const client_t* const client) {
     printf("Requesting batch %u\n", client->batch_nr);
     com_t com;
     com_init(&com, client->fd, MSG_CONFIRM, client->sock, flags_get_raw(1, FLAG_RR), 0);
-    com.packet->data = malloc(sizeof(uint32_t));
+
+    uint32_t batch_nr = client->batch_nr; 
+    com.packet->data = &batch_nr;
     com.packet->size = sizeof(uint32_t);
-    memcpy(com.packet->data, &client->batch_nr, sizeof(uint32_t));
+    
     com_send(&com);
 
-    free(com.packet->data);
     com_free(&com);
 }

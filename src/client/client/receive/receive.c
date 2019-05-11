@@ -23,10 +23,9 @@ void receive_batch(client_t* const client) {
         if (!com_receive(&com)) {
             //TODO: do something with timeout/faulty packets
         }
-
         uint8_t* buf_ptr = buf + com.packet->nr * constants_packets_size();
-        memcpy(buf_ptr, com.packet->data, constants_packets_size());
-
+        memcpy(buf_ptr, com.packet->data, com.packet->size);
+        free(com.packet->data);
         com_free(&com);
     }
 
@@ -44,12 +43,18 @@ bool receive_ACK(const client_t* const client, bool consume) {
     com_t com;
     com_init(&com, client->fd, consume ? MSG_WAITALL : MSG_PEEK, client->sock, FLAG_NONE, 0);
     com_receive(&com);
-    return flags_is_ACK(com.packet->flags);
+    bool is_ACK = flags_is_ACK(com.packet->flags);
+    free(com.packet->data);
+    com_free(&com);
+    return is_ACK;
 }
 
 bool receive_EOS(const client_t* const client, bool consume) {
     com_t com;
     com_init(&com, client->fd, consume ? MSG_WAITALL : MSG_PEEK, client->sock, FLAG_NONE, 0);
     com_receive(&com);
-    return flags_is_EOS(com.packet->flags);
+    bool is_EOS = flags_is_EOS(com.packet->flags);
+    free(com.packet->data);
+    com_free(&com);
+    return is_EOS;
 }
