@@ -11,13 +11,9 @@
 #include "server/server/receive/receive.h"
 #include "server/server/receive/client_search.h"
 
-static void process_intermediate(server_t* const server, com_t* const receive, client_info_t* const client, task_t* const task);
-
 // Receives a message from the client and registers the client if it is
 // a new connection, otherwise points to the current connected client
-static bool receive_and_check(server_t* const server, com_t* const receive, client_info_t** current) {
-    struct sockaddr_in client_address;
-    com_init(receive, server->fd, MSG_WAITALL, (struct sockaddr*) &client_address, 0, 0);
+static bool receive_and_check(server_t* const server, com_t* receive, client_info_t** current) {
     if (!com_receive(receive))
         return false;
 
@@ -45,7 +41,7 @@ static bool receive_and_check(server_t* const server, com_t* const receive, clie
 }
 
 // Processes an initial request from the client
-static bool process_initial(server_t* const server, com_t* const receive, client_info_t* const client, task_t* const task) {
+static bool process_initial(const com_t* const receive, client_info_t* const client, task_t* const task) {
     puts("process_initial");
     bool retval = false;
     if(flags_is_ACK(receive->packet->flags)) {
@@ -92,6 +88,9 @@ static void process_intermediate(server_t* const server, com_t* const receive, c
 static void process_final(com_t* const receive, client_info_t* const client, task_t* const task) {
     if(!client->in_use || flags_is_RR(receive->packet->flags)) {
         task->type = SEND_EOS;
+        client->in_use = false;
+        printf("Client in use: %s\n", client->in_use ? "TRUE" : "FALSE");
+        puts("dd");
     }
     else if (flags_is_REJ(receive->packet->flags)) {
         task->type = SEND_FAULTY;
@@ -99,14 +98,15 @@ static void process_final(com_t* const receive, client_info_t* const client, tas
     }
 }
 
-bool receive_from_client(server_t* const server, com_t* const receive, client_info_t** current, task_t* const task) {
+bool receive_from_client(server_t* const server, com_t* receive, client_info_t** current, task_t* const task) {
     client_info_t* client = NULL;
-    if(!receive_and_check(server, receive, &client))
+    if(!receive_and_check(server, receive, &client)) {
+        task->type = SEND_EOS;
         return false;
-
+    }
     switch (client->stage) {
         case INITIAL:
-            if(!process_initial(server, receive, client, task))
+            if(!process_initial(receive, client, task))
                 return false;
             break;
         case INTERMEDIATE:
@@ -118,6 +118,7 @@ bool receive_from_client(server_t* const server, com_t* const receive, client_in
         default:
             return false;
     }
+    printf("Client in use: %s\n", client->in_use ? "TRUE" : "FALSE");
     *current = client;
     return true;
 }

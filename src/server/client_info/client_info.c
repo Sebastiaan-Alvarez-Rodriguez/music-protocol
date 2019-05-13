@@ -12,6 +12,8 @@ void client_info_init(client_info_t* const client, const com_t* const com, void*
     client->batch_ready = false;
     client->music_ptr = music_data;
     client->stage = INITIAL;
+    client->bytes_sent = 0;
+    client->packets_per_batch = 0;
 }
 
 bool addr_in_cmp(const struct sockaddr_in* const c1, const struct sockaddr_in* const c2) {
