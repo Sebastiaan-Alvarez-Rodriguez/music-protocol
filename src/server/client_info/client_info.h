@@ -16,8 +16,6 @@ typedef enum {
     FINAL
 } stage_t;
 
-
-
 typedef struct {
    struct sockaddr_in client_addr;
 
@@ -29,7 +27,6 @@ typedef struct {
 
    struct timeval timeout_timer;
 
-   bool resend_packets;
    uint32_t bytes_sent;
    size_t packets_per_batch;
 
@@ -39,7 +36,7 @@ typedef struct {
 } client_info_t;
 
 // Initialize the client_info to the paramaters set in com_t
-void client_info_init(client_info_t* client, const com_t* const com);
+void client_info_init(client_info_t* const client, const com_t* const com, void* const music_data);
 
 // Compares two sockaddr_in structs, returns true if same address,
 // else returns false

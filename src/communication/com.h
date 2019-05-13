@@ -37,4 +37,7 @@ bool com_receive_peek(const com_t* const com);
 
 // Free a given com_t structure
 void com_free(const com_t* const com);
+
+void com_print(const com_t* const com);
+
 #endif

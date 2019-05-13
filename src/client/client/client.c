@@ -32,7 +32,7 @@ static void connect_server(client_t* const client, const char* address, const un
     do {
         retry = false;
         struct sockaddr_in* addr_in = (struct sockaddr_in*) client->sock;
-        bzero(addr_in, sizeof(*addr_in));
+        // bzero(addr_in, sizeof(struct sockaddr));
         addr_in->sin_family = AF_INET;
         addr_in->sin_port = htons(port);
 
@@ -71,8 +71,17 @@ void client_init(client_t* const client, const char* address, const unsigned sho
 
 
 void client_fill_initial_buffer(client_t* const client) {
-    while (!client->EOS_received && buffer_free_size(client->player->buffer) >= constants_batch_packets_amount(client->quality))
+    puts("Filling initial buffer...");
+    while (!client->EOS_received && buffer_free_size(client->player->buffer) >= constants_batch_packets_amount(client->quality)) {
         receive_batch(client);
+        printf("%lu%c\n", (buffer_used_size(client->player->buffer)*100) / buffer_capacity(client->player->buffer), '%');
+        // printf("client want batchnr: %i\n", client->batch_nr);
+        // printf("%lu >= %lu: %i\n", buffer_free_size(client->player->buffer), constants_batch_packets_amount(client->quality), buffer_free_size(client->player->buffer) >= constants_batch_packets_amount(client->quality));
+        // printf("Buf free: %lu\n", buffer_free_size(client->player->buffer));
+        // printf("Buf used: %lu\n", buffer_used_size(client->player->buffer));
+        // printf("Buf  cap: %lu\n", buffer_capacity(client->player->buffer));
+        // sleep(3);
+    }
 }
 
 void client_free(client_t* const client) {

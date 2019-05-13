@@ -6,15 +6,14 @@
 #include <string.h>
 
 #include "receive.h"
+#include "communication/constants/constants.h"
 #include "communication/flags/flags.h"
 #include "server/server/receive/receive.h"
 #include "server/server/receive/client_search.h"
 
 // Receives a message from the client and registers the client if it is
 // a new connection, otherwise points to the current connected client
-static bool receive_and_check(server_t* const server, com_t* const receive, client_info_t** current) {
-    struct sockaddr_in client_address;
-    com_init(receive, server->fd, MSG_WAITALL, (struct sockaddr*) &client_address, 0, 0);
+static bool receive_and_check(server_t* const server, com_t* receive, client_info_t** current) {
     if (!com_receive(receive))
         return false;
 
@@ -26,12 +25,12 @@ static bool receive_and_check(server_t* const server, com_t* const receive, clie
             break;
         case MATCH_UNUSED:
             puts("new user");
-            client_info_init(client, receive);
-            client->music_ptr = server->mf->samples;
+            client_info_init(client, receive, server->mf->samples);
             print_clients(server);
             break;
         case NO_MATCH:
             puts("rejected, clients full");
+            *current = NULL;
             return false;
         default:
             errno = EINVAL;
@@ -42,76 +41,84 @@ static bool receive_and_check(server_t* const server, com_t* const receive, clie
 }
 
 // Processes an initial request from the client
-// TODO change batchsize
-static bool receive_initial(const com_t* const receive, client_info_t* const client) {
-    puts("receive_initial");
-    if(!flags_is_ACK(receive->packet->flags))
-        return false;
+static bool process_initial(const com_t* const receive, client_info_t* const client, task_t* const task) {
+    puts("process_initial");
+    bool retval = false;
+    if(flags_is_ACK(receive->packet->flags)) {
+        client->current_q_level = *(uint8_t*) receive->packet->data;
+        client->packets_per_batch = constants_batch_packets_amount(client->current_q_level);
+        client->music_chuck_size = constants_packets_size();
+        client->stage = INITIAL;
+        task->type = SEND_ACK;
 
-    size_t* client_buff_size;
-    client_buff_size = (size_t*) receive->packet->data;
-    *client_buff_size *= 1000;
-
-    client->buffer_size = *client_buff_size;
-    client->packets_per_batch = 32;
-    client->music_chuck_size = calculate_packet_size(*client_buff_size, client->packets_per_batch * 64);
-    client->stage = INTERMEDIATE;
-
-    printf("Client buffer size: %lu\n", *client_buff_size);
-    printf("Client packet size: %lu\n", client->music_chuck_size);
-    printf("Client packets per batch: %lu\n", client->packets_per_batch);
-
-    return true;
+        printf("Client packet size: %lu\n", client->music_chuck_size);
+        printf("Client packets per batch: %lu\n", client->packets_per_batch);
+        retval = true;
+    }
+    else if(flags_is_RR(receive->packet->flags)) {
+        client->stage = INTERMEDIATE;
+        task->type = SEND_BATCH;
+        retval = true;
+    }
+    return retval;
 }
 
 // Processes an intermediate request from the client
-// TODO change batchsize
-static bool receive_intermediate(server_t* const server, com_t* const receive, client_info_t* const client) {
-    if(flags_is_RR(receive->packet->flags)) {
+static void process_intermediate(server_t* const server, com_t* const receive, client_info_t* const client, task_t* const task) {
+    if(!client->in_use) {
+        task->type = SEND_EOS;
+    }
+    else if(flags_is_RR(receive->packet->flags)) {
+        task->type = SEND_BATCH;
         client->music_ptr += client->packets_per_batch * client->music_chuck_size;
-        client->packets_per_batch = 32;
+        client->packets_per_batch = constants_batch_packets_amount(client->current_q_level);
+        puts("RR\n");
+        printf("Bytes sent: %u\n", client->bytes_sent);
+        printf("Total Bytes: %u\n", server->mf->payload_size);
+        printf("Batch size: %lu\n", client->packets_per_batch * client->music_chuck_size);
         if(client->bytes_sent + (client->packets_per_batch * client->music_chuck_size) >= server->mf->payload_size)
             client->stage = FINAL;
     }
     else if(flags_is_REJ(receive->packet->flags)) {
-        client->resend_packets = true;
-        client->packets_per_batch = receive->packet->size / sizeof(uint16_t);
+        task->type = SEND_FAULTY;
+        task->arg = receive->packet->data;
     }
-    else
-        return false;
-    return true;
 }
 
-static void receive_final(com_t* const receive, client_info_t* const client) {
-    if(flags_is_RR(receive->packet->flags)) {
+static void process_final(com_t* const receive, client_info_t* const client, task_t* const task) {
+    if(!client->in_use || flags_is_RR(receive->packet->flags)) {
+        task->type = SEND_EOS;
         client->in_use = false;
+        printf("Client in use: %s\n", client->in_use ? "TRUE" : "FALSE");
+        puts("dd");
     }
     else if (flags_is_REJ(receive->packet->flags)) {
-        client->resend_packets = true;
-        client->packets_per_batch = receive->packet->size / sizeof(uint16_t);
+        task->type = SEND_FAULTY;
+        task->arg = receive->packet->data;
     }
 }
 
-bool receive_from_client(server_t* const server, com_t* const receive, client_info_t** current) {
+bool receive_from_client(server_t* const server, com_t* receive, client_info_t** current, task_t* const task) {
     client_info_t* client = NULL;
-    if(!receive_and_check(server, receive, &client))
+    if(!receive_and_check(server, receive, &client)) {
+        task->type = SEND_EOS;
         return false;
-
+    }
     switch (client->stage) {
         case INITIAL:
-            if(!receive_initial(receive, client))
+            if(!process_initial(receive, client, task))
                 return false;
             break;
         case INTERMEDIATE:
-            if(!receive_intermediate(server, receive, client))
-                return false;
+            process_intermediate(server, receive, client, task);
             break;
         case FINAL:
-            receive_final(receive, client);
+            process_final(receive, client, task);
             break;
         default:
             return false;
     }
+    printf("Client in use: %s\n", client->in_use ? "TRUE" : "FALSE");
     *current = client;
     return true;
 }

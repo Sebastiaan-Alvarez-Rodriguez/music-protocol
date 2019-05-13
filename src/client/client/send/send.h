@@ -3,7 +3,7 @@
 #include "client/client/client.h"
 
 // Send an ACK to the server
-void send_initial_communication(const client_t* const client);
+void send_initial_communication(client_t* const client);
 
 // Send REJ a X to server, with a = current batch number and X = all packetnumbers to resend
 // len is the bytelength of the array

@@ -11,9 +11,10 @@
 void receive_batch(client_t* const client) {
     // Request batch
     send_RR(client);
-    if (receive_EOS(client, false))
+    if (receive_EOS(client, false)) {
         client->EOS_received = true;
-    return;
+        return;
+    }
     // Receive batch and temporarily store in buf
     uint8_t* buf = malloc(constants_batch_packets_amount(client->quality) * constants_packets_size());
     for (unsigned i = 0; i < constants_batch_packets_amount(client->quality); ++i) {
@@ -22,17 +23,16 @@ void receive_batch(client_t* const client) {
         if (!com_receive(&com)) {
             //TODO: do something with timeout/faulty packets
         }
-
         uint8_t* buf_ptr = buf + com.packet->nr * constants_packets_size();
-        memcpy(buf_ptr, com.packet->data, constants_packets_size());
-
+        memcpy(buf_ptr, com.packet->data, com.packet->size);
+        free(com.packet->data);
         com_free(&com);
     }
 
     // Place received data in player buffer
     for (unsigned i = 0; i < constants_batch_packets_amount(client->quality); ++i) {
         uint8_t* buf_ptr = buf + i * constants_packets_size();
-        buffer_add(client->player->buffer, buf_ptr, constants_packets_size());
+        buffer_add(client->player->buffer, buf_ptr, true);
     }
     free(buf);
     // batch received with success. Next time, ask next batch
@@ -41,14 +41,21 @@ void receive_batch(client_t* const client) {
 
 bool receive_ACK(const client_t* const client, bool consume) {
     com_t com;
+    printf("%p\n", (void*)client->sock);
     com_init(&com, client->fd, consume ? MSG_WAITALL : MSG_PEEK, client->sock, FLAG_NONE, 0);
     com_receive(&com);
-    return flags_is_ACK(com.flags);
+    bool is_ACK = flags_is_ACK(com.packet->flags);
+    free(com.packet->data);
+    com_free(&com);
+    return is_ACK;
 }
 
 bool receive_EOS(const client_t* const client, bool consume) {
     com_t com;
     com_init(&com, client->fd, consume ? MSG_WAITALL : MSG_PEEK, client->sock, FLAG_NONE, 0);
     com_receive(&com);
-    return flags_is_EOS(com.flags);
+    bool is_EOS = flags_is_EOS(com.packet->flags);
+    free(com.packet->data);
+    com_free(&com);
+    return is_EOS;
 }

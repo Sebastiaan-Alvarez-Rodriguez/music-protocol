@@ -15,10 +15,8 @@ static void player_open_audio_device(player_t* const player) {
     do {
         if ((err = snd_pcm_open(&(player->snd_handle), "default", SND_PCM_STREAM_PLAYBACK, 0)) < 0) {
             printf("couldnt open audio device: %s\n", snd_strerror(err));
-            if (!menu_yes_no("Retry?")) {
-                player_free(player);
+            if (!menu_yes_no("Retry?"))
                 exit(-1);
-            }
         }
     } while (err < 0);
 
@@ -52,8 +50,9 @@ void player_init(player_t* const player, const size_t max_elems, const size_t el
 void player_play(player_t* const player) {
 
     /* write frames to ALSA */
-    snd_pcm_sframes_t frames = snd_pcm_writei(player->snd_handle, buffer_get(player->buffer), player->buffer->elem_size);
-
+    void* data = buffer_get(player->buffer);
+    snd_pcm_sframes_t frames = snd_pcm_writei(player->snd_handle, data, player->buffer->elem_size / 4);
+    free(data);
     /* Check for errors */
     int ret = 0;
     if (frames < 0)
