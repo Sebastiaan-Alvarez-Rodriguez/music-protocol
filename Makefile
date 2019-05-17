@@ -42,6 +42,7 @@ $(OBJS)/%.o: %.c
 clean:
 	@echo Cleaning...
 	@rm -rf $(OBJS) server client
+	@echo Done!
 
 git: clean
 	git add *

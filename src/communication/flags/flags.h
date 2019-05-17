@@ -1,5 +1,6 @@
 #ifndef FLAGS
 #define FLAGS
+#include <stdbool.h>
 #include <stdint.h>
 
 enum flags {

@@ -67,7 +67,7 @@ void server_run(server_t* const server) {
         client_info_t* current_client = NULL;
 
         receive_from_client(server, &receive, &current_client, &task);
-        printf("%d\n", task.type);
+        // printf("%d\n", task.type);
         if(current_client != NULL)
             send_to_client(server, current_client, &task);
         com_free(&receive);

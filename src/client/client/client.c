@@ -13,6 +13,7 @@
 #include "menu/menu.h"
 #include "client.h"
 
+#include "client/client/send/send.h"
 // Sets up sockets to connect to a server at given address and port.
 static void connect_server(client_t* const client, const char* address, const unsigned short port) {
     int socket_fd;
@@ -48,7 +49,7 @@ static void connect_server(client_t* const client, const char* address, const un
 }
 
 void client_init(client_t* const client, const char* address, const unsigned short port, const unsigned buffer_size, const unsigned initial_quality) {
-    client->sock = malloc(sizeof(struct sockaddr*));
+    client->sock = malloc(sizeof(struct sockaddr));
     connect_server(client, address, port);
     client->player = malloc(sizeof(player_t));
     client->quality = initial_quality;
@@ -75,13 +76,8 @@ void client_fill_initial_buffer(client_t* const client) {
     while (!client->EOS_received && buffer_free_size(client->player->buffer) >= constants_batch_packets_amount(client->quality)) {
         receive_batch(client);
         printf("%lu%c\n", (buffer_used_size(client->player->buffer)*100) / buffer_capacity(client->player->buffer), '%');
-        // printf("client want batchnr: %i\n", client->batch_nr);
-        // printf("%lu >= %lu: %i\n", buffer_free_size(client->player->buffer), constants_batch_packets_amount(client->quality), buffer_free_size(client->player->buffer) >= constants_batch_packets_amount(client->quality));
-        // printf("Buf free: %lu\n", buffer_free_size(client->player->buffer));
-        // printf("Buf used: %lu\n", buffer_used_size(client->player->buffer));
-        // printf("Buf  cap: %lu\n", buffer_capacity(client->player->buffer));
-        // sleep(3);
     }
+    puts("Done! Playing...");
 }
 
 void client_free(client_t* const client) {
