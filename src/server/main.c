@@ -8,7 +8,6 @@ static void show_help(const char *prog_name) {
     puts(prog_name);
     puts("[-q initial_quality] [-f soundfile] [-p port] [-d debug] [-h]");
     puts("");
-    puts("-q quality    Specify initial initial_quality. Number within [1-5]");
     puts("-f soundfile  The soundfile to send to the client");
     puts("-p port       Specify which port the client should connect to");
     puts("-h            Shows this dialog");

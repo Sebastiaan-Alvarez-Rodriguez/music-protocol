@@ -127,7 +127,7 @@ __attribute__ ((unused)) static void print_bits(const size_t size, const void* c
 }
 
 //Print all bits for given size in buffer. assumes little endian
-static void print_hex(const size_t size, const void* const ptr) {
+__attribute__ ((unused)) static void print_hex(const size_t size, const void* const ptr) {
     uint8_t* hexptr = (uint8_t*) ptr;
 
     for (int i=size-1;i>=0;i--) {

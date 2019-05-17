@@ -1,15 +1,17 @@
 #ifndef CLIENT
 #define CLIENT
 #include <stdint.h>
+
 #include "client/musicplayer/player.h"
 #include "communication/com.h"
 #include "communication/flags/flags.h"
+#include "communication/quality/quality.h"
 
 typedef struct {
     unsigned fd;
     struct sockaddr* sock;
     player_t* player;
-    uint8_t quality;
+    quality_t* quality;
 
     uint32_t batch_nr;
     bool EOS_received;

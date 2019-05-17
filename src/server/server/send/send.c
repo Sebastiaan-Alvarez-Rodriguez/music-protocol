@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include "communication/flags/flags.h"
+#include "communication/quality/quality.h"
 #include "compression/compress.h"
 #include "server/client_info/client_info.h"
 
@@ -41,9 +42,9 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
         switch(current->stage) {
             case INTERMEDIATE:
                 prepare_intermediate(send, current, i);
-                if (current->current_q_level == 1)
+                if (quality_suggest_downsampling(current->quality))
                     downsample(send, 8);
-                if (current->current_q_level <= 2)
+                if (quality_suggest_compression(current->quality))
                     compress(send);
                 break;
             case FINAL:
@@ -54,7 +55,9 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
                 return false;
         }
         retval &= com_send(send);
-        if (current->current_q_level <= 2 && current->stage == INTERMEDIATE)
+        if (current->stage == INTERMEDIATE && (
+            quality_suggest_downsampling(current->quality)
+            || quality_suggest_compression(current->quality)))
             free(send->packet->data);
     }
     return retval;

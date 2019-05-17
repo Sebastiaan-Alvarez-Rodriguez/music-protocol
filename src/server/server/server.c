@@ -53,9 +53,7 @@ bool server_set_port(server_t* const server, unsigned short port) {
 bool server_set_num_clients(server_t* const server, const unsigned max_clients) {
     server->max_clients = max_clients;
     server->clients = calloc(max_clients, sizeof(client_info_t));
-    if(server->clients == NULL || errno == ENOMEM)
-        return false;
-    return true;
+    return server->clients != NULL && errno != ENOMEM;
 }
 
 void server_run(server_t* const server) {

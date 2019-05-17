@@ -28,7 +28,7 @@ void run(const char* address, const unsigned short port, const unsigned buffer_s
     client_fill_initial_buffer(&client);
 
     while(!client.EOS_received) {
-        while (buffer_free_size(client.player->buffer) < constants_batch_packets_amount(client.quality))
+        while (buffer_free_size(client.player->buffer) < constants_batch_packets_amount(client.quality->current))
             player_play(client.player);
         
         receive_batch(&client);
@@ -58,8 +58,8 @@ int main(int argc, char **argv) {
                         buffer_size = tmp_size * 1024;
                     } else {
                         puts("Buffer must at least contain one max batch.");
-                        printf("At this point, the size of max batch is approx. %lu KB\n", constants_batch_size(5)/1024 + 1);
-                        puts("If this means that you cannot use this framework on your microwave, we are very sorry.")
+                        printf("At this point, the size of max batch is approx. %lu KB.\n", constants_batch_size(5)/1024 + 1);
+                        puts("If this means that you cannot use this framework on your microwave, we are very sorry.");
                         return -1;
                     }
                 } else {
@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
                     printf("Quality set to %u\n", initial_quality);
                 }
                 else {
-                    puts("Your quality level must be within [1-5]");
+                    puts("Your quality level must be within [1-5].");
                     return -1;
                 }
                 break;
@@ -93,7 +93,7 @@ int main(int argc, char **argv) {
     argc -= optind;
     argv += optind;
 
-    printf("Buffersize is set to approx. %lu KB\n", buffer_size/1024);
+    printf("Buffersize is set to approx. %lu KB.\n", buffer_size/1024);
     run(server_address, bind_port, buffer_size, initial_quality);
     return 0;
 }

@@ -47,9 +47,10 @@ static void raw_batch_free(raw_batch_t* raw) {
 }
 
 static inline bool raw_batch_integrity_ok(const client_t* const client, raw_batch_t* raw) {
-    if (raw->size_nrs != constants_batch_packets_amount(client->quality)) {
-        uint8_t* missing = raw_batch_get_missing_nrs(raw, constants_batch_packets_amount(client->quality));
-        send_REJ(client, constants_batch_packets_amount(client->quality) - raw->size_nrs, missing);
+    if (raw->size_nrs != constants_batch_packets_amount(client->quality->current)) {
+        uint8_t* missing = raw_batch_get_missing_nrs(raw, constants_batch_packets_amount(client->quality->current));
+        send_REJ(client, constants_batch_packets_amount(client->quality->current) - raw->size_nrs, missing);
+        free(missing);
         return false;
     }
     return true;
@@ -57,7 +58,7 @@ static inline bool raw_batch_integrity_ok(const client_t* const client, raw_batc
 
 static raw_batch_t* raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
     uint8_t initial_size_retrieved = raw->size_nrs;
-    for (unsigned i = 0; i < (constants_batch_packets_amount(client->quality) - initial_size_retrieved); ++i) {
+    for (unsigned i = 0; i < (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved); ++i) {
         com_t com;
         com_init(&com, client->fd, MSG_WAITALL, client->sock, FLAG_NONE, 0);
         enum recv_flag flag = com_receive(&com);
@@ -66,7 +67,7 @@ static raw_batch_t* raw_batch_receive(const client_t* const client, raw_batch_t*
         else if (flag == RECV_FAULTY)
             continue;
 
-        if (client->quality <= 2)
+        if (quality_suggest_compression(client->quality))
             decompress(&com);
 
         uint8_t* buf_ptr = (uint8_t*) raw->data_ptr + com.packet->nr * constants_packets_size();
@@ -87,13 +88,13 @@ void receive_batch(client_t* const client) {
         return;
     }
     raw_batch_t raw;
-    raw_batch_init(&raw, constants_batch_packets_amount(client->quality));
+    raw_batch_init(&raw, constants_batch_packets_amount(client->quality->current));
     do {
         raw_batch_receive(client, &raw);
     } while (!raw_batch_integrity_ok(client, &raw));
 
     // Place received data in player buffer
-    for (unsigned i = 0; i < constants_batch_packets_amount(client->quality); ++i) {
+    for (unsigned i = 0; i < constants_batch_packets_amount(client->quality->current); ++i) {
         uint8_t* buf_ptr = (uint8_t*) raw.data_ptr + i * constants_packets_size();
         buffer_add(client->player->buffer, buf_ptr, true);
     }

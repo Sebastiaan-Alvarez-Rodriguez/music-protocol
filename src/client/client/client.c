@@ -11,6 +11,7 @@
 #include "communication/com.h"
 #include "communication/constants/constants.h"
 #include "communication/flags/flags.h"
+#include "communication/quality/quality.h"
 #include "menu/menu.h"
 #include "client.h"
 
@@ -39,7 +40,6 @@ static void connect_server(client_t* const client, const char* address, const un
     do {
         retry = false;
         struct sockaddr_in* addr_in = (struct sockaddr_in*) client->sock;
-        // bzero(addr_in, sizeof(struct sockaddr));
         addr_in->sin_family = AF_INET;
         addr_in->sin_port = htons(port);
 
@@ -58,7 +58,9 @@ void client_init(client_t* const client, const char* address, const unsigned sho
     client->sock = malloc(sizeof(struct sockaddr));
     connect_server(client, address, port);
     client->player = malloc(sizeof(player_t));
-    client->quality = initial_quality;
+    client->quality = malloc(sizeof(quality_t));
+    quality_init(client->quality, initial_quality);
+
     client->batch_nr = 0;
     client->EOS_received = false;
     bool retry;
@@ -92,7 +94,7 @@ void client_fill_initial_buffer(client_t* const client) {
     do {
         receive_batch(client);
         printf("%lu%c\n", (buffer_used_size(client->player->buffer)*100) / buffer_capacity(client->player->buffer), '%');
-    } while(!client->EOS_received && buffer_free_size(client->player->buffer) >= constants_batch_packets_amount(client->quality));
+    } while(!client->EOS_received && buffer_free_size(client->player->buffer) >= constants_batch_packets_amount(client->quality->current));
     puts("Done! Playing...");
 }
 
@@ -101,4 +103,5 @@ void client_free(client_t* const client) {
 
     player_free(client->player);
     free(client->player);
+    free(client->quality);
 }
