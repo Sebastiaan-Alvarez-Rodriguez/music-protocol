@@ -1,8 +1,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/time.h>
 
 #include "client/musicplayer/player.h"
 #include "client/client/receive/receive.h"
@@ -13,7 +14,6 @@
 #include "menu/menu.h"
 #include "client.h"
 
-#include "client/client/send/send.h"
 // Sets up sockets to connect to a server at given address and port.
 static void connect_server(client_t* const client, const char* address, const unsigned short port) {
     int socket_fd;
@@ -28,6 +28,12 @@ static void connect_server(client_t* const client, const char* address, const un
                 retry = true;
             else
                 exit(-1);
+        }
+        struct timeval tv;
+        tv.tv_sec = 0;
+        tv.tv_usec = 100000; //100.000 us = 100 ms
+        if (setsockopt(socket_fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
+            perror("Error");
         }
     } while (retry);
     do {
@@ -59,11 +65,21 @@ void client_init(client_t* const client, const char* address, const unsigned sho
     do {
         retry = false;
         send_initial_communication(client);
-        if (!receive_ACK(client, true)) {
-            if (menu_yes_no("Server has no room for more clients. Retry?"))
+        enum recv_flag flag = receive_ACK(client, true);
+        if (flag != RECV_OK) {
+            const char* msg;
+            if (flag == RECV_FAULTY)
                 retry = true;
-            else
-                exit(-1);
+            else {
+                if (flag == RECV_TIMEOUT)
+                    msg = "Server connection could not be established. Retry?";
+                else
+                    msg = "Server has no room for more clients. Retry?";
+                if (menu_yes_no(msg))
+                    retry = true;
+                else
+                    exit(-1);
+            }
         }
     } while (retry);
 
@@ -73,10 +89,10 @@ void client_init(client_t* const client, const char* address, const unsigned sho
 
 void client_fill_initial_buffer(client_t* const client) {
     puts("Filling initial buffer...");
-    while (!client->EOS_received && buffer_free_size(client->player->buffer) >= constants_batch_packets_amount(client->quality)) {
+    do {
         receive_batch(client);
         printf("%lu%c\n", (buffer_used_size(client->player->buffer)*100) / buffer_capacity(client->player->buffer), '%');
-    }
+    } while(!client->EOS_received && buffer_free_size(client->player->buffer) >= constants_batch_packets_amount(client->quality));
     puts("Done! Playing...");
 }
 

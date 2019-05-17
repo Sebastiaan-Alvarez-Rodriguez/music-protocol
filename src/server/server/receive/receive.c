@@ -14,7 +14,7 @@
 // Receives a message from the client and registers the client if it is
 // a new connection, otherwise points to the current connected client
 static bool receive_and_check(server_t* const server, com_t* receive, client_info_t** current) {
-    if (!com_receive(receive))
+    if (com_receive(receive) != RECV_OK)
         return false;
 
     client_info_t* client = NULL;
