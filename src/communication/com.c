@@ -142,9 +142,18 @@ void com_init(com_t* const com, unsigned sockfd, int flags, struct sockaddr* con
     com->packet = malloc(sizeof(packet_t));
     com->flags = flags;
     com->address = address;
-    com->addr_len = sizeof(*address);
+    com->addr_len = sizeof(struct sockaddr);
     packet_init(com->packet, packet_flags, packetnr);
 }
+
+// void com_init_addr_cpy(com_t* const com, unsigned sockfd, int flags, struct sockaddr* const address, uint8_t packet_flags, uint8_t packetnr) {
+//     com->sockfd = sockfd;
+//     com->packet = malloc(sizeof(packet_t));
+//     com->flags = flags;
+//     memcpy(com->address, address, );
+//     com->addr_len = sizeof(struct sockaddr);
+//     packet_init(com->packet, packet_flags, packetnr);
+// }
 
 bool com_send(const com_t* const com) {
     void* buf = NULL;
@@ -233,4 +242,10 @@ bool com_receive_peek(const com_t* const com) {
 
 void com_free(const com_t* const com) {
     free(com->packet);
+}
+
+void com_print(const com_t* const com) {
+    struct sockaddr_in* ptr = (struct sockaddr_in*) com->address;
+    printf("Com: {ip : %s}, {port : %u}, {family : %u}\n",
+            inet_ntoa(ptr->sin_addr), ntohs(ptr->sin_port), ptr->sin_family);
 }

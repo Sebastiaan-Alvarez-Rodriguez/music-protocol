@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
     unsigned short port = 1235;
     char c;
     char* filename = NULL;
-    unsigned max_clients = 5;
+    unsigned max_clients = 1;
     const char* const prog_name = argv[0];
     while ((c = getopt(argc, argv, "f:p:h")) != -1){
         switch (c) {

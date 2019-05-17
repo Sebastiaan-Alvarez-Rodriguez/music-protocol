@@ -62,15 +62,16 @@ void server_run(server_t* const server) {
     bool running = true;
     struct sockaddr_in client;
     while(running) {
-        com_t receive;
+        com_t com;
+        struct sockaddr_in address;
         task_t task;
         client_info_t* current_client = NULL;
+        com_init(&com, server->fd, MSG_WAITALL, (struct sockaddr*) &address, 0, 0);
 
-        receive_from_client(server, &receive, &current_client, &task);
-        // printf("%d\n", task.type);
-        if(current_client != NULL)
-            send_to_client(server, current_client, &task);
-        com_free(&receive);
+        receive_from_client(server, &com, &current_client, &task);
+        send_to_client(server, &com, current_client, &task);
+        print_clients(server);
+        com_free(&com);
     }
 }
 

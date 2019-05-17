@@ -16,8 +16,6 @@ typedef enum {
     FINAL
 } stage_t;
 
-
-
 typedef struct {
    struct sockaddr_in client_addr;
 

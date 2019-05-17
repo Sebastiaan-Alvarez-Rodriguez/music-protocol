@@ -22,11 +22,9 @@ static void prepare_intermediate(com_t* const send, client_info_t* const client,
 
 static void prepare_final(server_t* const server, com_t* const send, client_info_t* const client, const uint16_t packet_nr) {
     size_t bytes_to_send = client->music_chuck_size;
-    if(client->bytes_sent + client->music_chuck_size > server->mf->payload_size) {
-        // printf("%u + %lu > %u\n", client->bytes_sent, client->music_chuck_size, server->mf->payload_size);
+    if(client->bytes_sent + client->music_chuck_size > server->mf->payload_size)
         bytes_to_send = server->mf->payload_size - client->bytes_sent;
-    }
-    // printf("Nr [%u], sending bytes: %lu\n", packet_nr, bytes_to_send);
+    printf("Nr [%u], sending bytes: %lu\n", packet_nr, bytes_to_send);
     prepare_music_packet(send, client, bytes_to_send, packet_nr);
 }
 
@@ -87,29 +85,25 @@ static bool send_faulty(server_t* const server, com_t* const send, client_info_t
     return retval;
 }
 
-bool send_to_client(server_t* const server, client_info_t* const current, const task_t* const task) {
-    com_t send;
-    com_init(&send, server->fd, MSG_CONFIRM, (struct sockaddr*) &current->client_addr, 0, 0);
-    if(current->stage == FINAL)
-        puts("FINAL STAGE\n\n\n");
+bool send_to_client(server_t* const server, com_t* const com, client_info_t* const current, const task_t* const task) {
+    printf("TASK: %u\n", task->type);
     bool retval = false;
     switch (task->type) {
         case SEND_ACK:
-            retval &= send_flags(&send, FLAG_ACK);
+            retval &= send_flags(com, FLAG_ACK);
             break;
         case SEND_EOS:
-            retval &= send_flags(&send, FLAG_EOS);
+            puts("SEND EOS");
+            retval &= send_flags(com, FLAG_EOS);
             break;
         case SEND_BATCH:
-            retval &= send_batch(server, &send, current);
+            retval &= send_batch(server, com, current);
             break;
         case SEND_FAULTY:
-            retval &= send_faulty(server, &send, current, task);
+            retval &= send_faulty(server, com, current, task);
             break;
         default:
             return false;
     }
-
-    com_free(&send);
     return retval;
 }

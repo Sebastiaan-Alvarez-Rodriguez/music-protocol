@@ -47,6 +47,7 @@ void receive_batch(client_t* const client) {
 
 bool receive_ACK(const client_t* const client, bool consume) {
     com_t com;
+    printf("%p\n", (void*)client->sock);
     com_init(&com, client->fd, consume ? MSG_WAITALL : MSG_PEEK, client->sock, FLAG_NONE, 0);
     com_receive(&com);
     bool is_ACK = flags_is_ACK(com.packet->flags);
