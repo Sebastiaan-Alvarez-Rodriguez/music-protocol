@@ -3,9 +3,11 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "send.h"
 #include "communication/flags/flags.h"
+#include "compression/compress.h"
 #include "server/client_info/client_info.h"
+
+#include "send.h"
 
 static void prepare_music_packet(com_t* const send, client_info_t* const client, size_t bytes_to_send, const size_t packet_nr) {
     send->packet->data = get_music_chunk(client, packet_nr);
@@ -39,6 +41,10 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
         switch(current->stage) {
             case INTERMEDIATE:
                 prepare_intermediate(send, current, i);
+                if (current->current_q_level == 1)
+                    downsample(send, 8);
+                if (current->current_q_level <= 2)
+                    compress(send);
                 break;
             case FINAL:
                 prepare_final(server, send, current, i);
@@ -48,6 +54,8 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
                 return false;
         }
         retval &= com_send(send);
+        if (current->current_q_level <= 2 && current->stage == INTERMEDIATE)
+            free(send->packet->data);
     }
     return retval;
 }

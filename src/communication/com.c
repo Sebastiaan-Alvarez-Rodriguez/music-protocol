@@ -8,6 +8,7 @@
 
 #include "communication/packet/packet.h"
 #include "communication/checksums/checksum.h"
+
 #include "com.h"
 
 ///////////////////////////////////////////////////
@@ -170,6 +171,9 @@ bool com_send(const com_t* const com) {
     // printf("packet nr: %u\n", com->packet->nr);
     // printf("Raw data:"); print_hex(size, buf);
     // puts("--------------");
+
+    // if (com->flags == 0)
+    //     print_hex(com->packet->size, com->packet->data);
 
     bool ret = sendto(com->sockfd, buf, size, com->flags, com->address, com->addr_len) >= 0;
     free(buf);
