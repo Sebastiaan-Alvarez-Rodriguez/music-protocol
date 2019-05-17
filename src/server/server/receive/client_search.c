@@ -12,7 +12,7 @@ search_return search_client(server_t* const server, struct sockaddr* address, cl
         printf("INUSE =  %s\n", ptr[i].in_use ? "TRUE" : "FALSE");
         if (ptr[i].in_use && addr_in_cmp((struct sockaddr_in*) &ptr[i].client_addr, current_addr))
             return MATCH;
-        else
+        else if(!ptr[i].in_use)
             return MATCH_UNUSED;
     }
     *current = NULL;

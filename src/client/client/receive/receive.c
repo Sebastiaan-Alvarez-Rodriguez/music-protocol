@@ -1,4 +1,5 @@
 #include <netinet/in.h>
+#include <stdbool.h>
 
 #include "buffer/buffer.h"
 #include "client/client/client.h"
@@ -8,26 +9,34 @@
 
 #include "receive.h"
 
-static void receive_correct(client_t* const client, uint8_t* buf, const size_t init_num_faulty, uint16_t* init_faulties) {
+static void receive_correct(client_t* const client, uint8_t* buf, const size_t init_num_faulty, const size_t batch_size, bool* corrects) {
     bool all_success = true;
-
+    printf("receive correct: %lu", init_num_faulty);
     size_t num_faulty = init_num_faulty;
-    uint16_t* faulty_queue = init_faulties;
+    uint16_t* faulty_queue = calloc(sizeof(uint16_t), init_num_faulty);
+    uint16_t* ptr = faulty_queue;
+
     do {
+        for(unsigned i = 0; i < batch_size; ++i) {
+            if(!corrects[i]) {
+                *ptr = i;
+                ++ptr;
+                printf("faulties: %u\n", i);
+            }
+        }
         send_REJ(client, num_faulty, faulty_queue);
-        faulty_queue = init_faulties;
+        size_t count_faulty = 0;
         num_faulty = 0;
+        ptr = faulty_queue;
         for(unsigned i = 0; i < num_faulty; ++i) {
             com_t com;
             com_init(&com, client->fd, MSG_WAITALL, client->sock, FLAG_NONE, 0);
             if (!com_receive(&com)) {
                 all_success = false;
-                *faulty_queue = com.packet->nr;
-                ++faulty_queue;
-                ++num_faulty;
-                continue;
+                ++count_faulty;
             }
             else {
+                corrects[com.packet->nr] = true;
                 uint8_t* buf_ptr = buf + com.packet->nr * constants_packets_size();
                 memcpy(buf_ptr, com.packet->data, constants_packets_size());
             }
@@ -35,6 +44,7 @@ static void receive_correct(client_t* const client, uint8_t* buf, const size_t i
         }
     }
     while(!all_success);
+    free(faulty_queue);
 }
 
 void receive_batch(client_t* const client) {
@@ -44,20 +54,22 @@ void receive_batch(client_t* const client) {
         client->EOS_received = true;
         return;
     }
-    uint16_t* faulty_queue = calloc(sizeof(uint16_t),constants_batch_packets_amount(client->quality));
+    size_t num_batch_packets = constants_batch_packets_amount(client->quality);
     size_t num_faulty = 0;
+    bool package_correct[num_batch_packets];
+    memset(package_correct, 0, sizeof(bool) * num_batch_packets);
 
     // Receive batch and temporarily store in buf
-    uint8_t* buf = malloc(constants_batch_packets_amount(client->quality) * constants_packets_size());
-    for (unsigned i = 0; i < constants_batch_packets_amount(client->quality); ++i) {
+    uint8_t* buf = malloc(num_batch_packets * constants_packets_size());
+    for (unsigned i = 0; i < num_batch_packets; ++i) {
         com_t com;
         com_init(&com, client->fd, MSG_WAITALL, client->sock, FLAG_NONE, 0);
         if (!com_receive(&com)) {
-            *faulty_queue = com.packet->nr;
-            ++faulty_queue;
+            printf("failed [%u]\n", i);
             ++num_faulty;
         }
         else {
+            package_correct[com.packet->nr] = true;
             uint8_t* buf_ptr = buf + com.packet->nr * constants_packets_size();
             memcpy(buf_ptr, com.packet->data, com.packet->size);
         }
@@ -65,15 +77,15 @@ void receive_batch(client_t* const client) {
         com_free(&com);
     }
 
+    printf("faulties: %lu\n", num_faulty);
     if(num_faulty > 0)
-      receive_correct(client, buf, num_faulty, faulty_queue);
+      receive_correct(client, buf, num_faulty, num_batch_packets, package_correct);
 
     // Place received data in player buffer
     for (unsigned i = 0; i < constants_batch_packets_amount(client->quality); ++i) {
         uint8_t* buf_ptr = buf + i * constants_packets_size();
         buffer_add(client->player->buffer, buf_ptr, true);
     }
-    free(faulty_queue);
     free(buf);
     // batch received with success. Next time, ask next batch
     client->batch_nr++;

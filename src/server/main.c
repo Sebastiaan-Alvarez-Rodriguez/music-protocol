@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <time.h>
 #include <getopt.h>
 
 #include "server/server/server.h"
@@ -37,6 +38,8 @@ int main(int argc, char** argv) {
     }
     argc -= optind;
     argv += optind;
+
+    srand((unsigned) time(NULL));
 
     if (!filename) {
         puts("Please specify a sound file to open with -f <name>");

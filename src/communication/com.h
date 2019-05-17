@@ -23,6 +23,10 @@ typedef struct {
 // Initialize a com-struct
 void com_init(com_t* const com, unsigned sockfd, int flags, struct sockaddr* const address, uint8_t packet_flags, uint8_t packetnr);
 
+// Send a packet from the server
+// Includes SIMULATION define
+bool com_send_server(const com_t* const com);
+
 // Send a packet to destined client
 // Returns true on success, false otherwise (should check errno)
 bool com_send(const com_t* const com);

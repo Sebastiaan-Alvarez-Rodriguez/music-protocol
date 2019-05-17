@@ -8,7 +8,10 @@
 
 #include "communication/packet/packet.h"
 #include "communication/checksums/checksum.h"
+#include "communication/faulty/faulty.h"
 #include "com.h"
+
+#define SIMULATIONS
 
 ///////////////////////////////////////////////////
 // Important - Read me
@@ -154,6 +157,26 @@ void com_init(com_t* const com, unsigned sockfd, int flags, struct sockaddr* con
 //     packet_init(com->packet, packet_flags, packetnr);
 // }
 
+bool com_send_server(const com_t* const com) {
+    void* buf = NULL;
+    uint16_t size = 0;
+    if (!convert_send(&buf, &size, com->packet)) {
+        perror("convert_send");
+        return false;
+    }
+
+    #ifdef SIMULATIONS
+        flip_random_bits(size, buf, 1, 0.001f);
+        puts("sim");
+    #endif
+
+    bool ret = sendto(com->sockfd, buf, size, com->flags, com->address, com->addr_len) >= 0;
+    free(buf);
+    if(!ret)
+        perror("sendto");
+    return ret;
+}
+
 bool com_send(const com_t* const com) {
     void* buf = NULL;
     uint16_t size = 0;
@@ -195,8 +218,10 @@ bool com_receive(com_t* const com) {
     //Checksum control for checksum 1
     uint16_t test_checksum1 = make_checksum1(size, flags, packetnr, checksum2);
     if (checksum1 != test_checksum1) {
-        free(check_buf);
         printf("Checksum1 mismatch! Expected %#8X, got %#8X\n", checksum1, test_checksum1);
+        printf("c1 packet_nr[%u]\n", packetnr);
+        recvfrom(com->sockfd, check_buf, sizeof(uint16_t)*4, MSG_WAITALL, com->address, &com->addr_len);
+        free(check_buf);
         return false;
     }
     free(check_buf);
@@ -211,7 +236,8 @@ bool com_receive(com_t* const com) {
     //Checksum control for checksum2
     uint16_t test_checksum2 = make_checksum2(buf_get_data(full_data), size);
     if (checksum2 != test_checksum2) {
-        printf("Checksum2 mismatch! Expected %#8X, got %#8X", checksum2, test_checksum2);
+        printf("Checksum2 mismatch! Expected %#8X, got %#8X\n", checksum2, test_checksum2);
+        printf("c2 packet_nr[%u]\n", packetnr);
         return false;
     }
 
