@@ -7,6 +7,8 @@
 #include "communication/constants/constants.h"
 #include "communication/flags/flags.h"
 
+#include "compression/compress.h"
+
 #include "receive.h"
 
 static void receive_correct(client_t* const client, uint8_t* buf, const size_t init_num_faulty, const size_t batch_size, bool* corrects) {
@@ -37,6 +39,8 @@ static void receive_correct(client_t* const client, uint8_t* buf, const size_t i
             }
             else {
                 corrects[com.packet->nr] = true;
+                if (client->quality <= 2)
+                    decompress(&com);
                 uint8_t* buf_ptr = buf + com.packet->nr * constants_packets_size();
                 memcpy(buf_ptr, com.packet->data, constants_packets_size());
             }
@@ -70,6 +74,8 @@ void receive_batch(client_t* const client) {
         }
         else {
             package_correct[com.packet->nr] = true;
+            if (client->quality <= 2)
+                decompress(&com);
             uint8_t* buf_ptr = buf + com.packet->nr * constants_packets_size();
             memcpy(buf_ptr, com.packet->data, com.packet->size);
         }
@@ -88,7 +94,7 @@ void receive_batch(client_t* const client) {
     }
     free(buf);
     // batch received with success. Next time, ask next batch
-    client->batch_nr++;
+    ++client->batch_nr;
 }
 
 bool receive_ACK(const client_t* const client, bool consume) {

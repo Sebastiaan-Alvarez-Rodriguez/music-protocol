@@ -2,6 +2,7 @@
 
 #include "communication/com.h"
 #include "communication/flags/flags.h"
+
 #include "send.h"
 
 void send_initial_communication(client_t* const client) {
@@ -31,7 +32,7 @@ void send_REJ(const client_t* const client, const size_t len, const uint16_t* pa
 }
 
 void send_RR(const client_t* const client) {
-    printf("Requesting batch %u\n", client->batch_nr);
+    // printf("Requesting batch %u\n", client->batch_nr);
     com_t com;
     com_init(&com, client->fd, MSG_CONFIRM, client->sock, flags_get_raw(1, FLAG_RR), 0);
 
@@ -40,6 +41,5 @@ void send_RR(const client_t* const client) {
     com.packet->size = sizeof(uint32_t);
     
     com_send(&com);
-
     com_free(&com);
 }

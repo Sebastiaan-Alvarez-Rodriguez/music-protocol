@@ -6,6 +6,7 @@
 #include "send.h"
 #include "communication/faulty/faulty.h"
 #include "communication/flags/flags.h"
+#include "compression/compress.h"
 #include "server/client_info/client_info.h"
 
 #define SIMULATION
@@ -55,7 +56,11 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
     for(unsigned i = 0; i < current->packets_per_batch; ++i) {
         switch(current->stage) {
             case INTERMEDIATE:
-                prepare_intermediate(send, current, nums[i]);
+                prepare_intermediate(send, current, i);
+                if (current->current_q_level == 1)
+                    downsample(send, 8);
+                if (current->current_q_level <= 2)
+                    compress(send);
                 break;
             case FINAL:
                 prepare_final(server, send, current, nums[i]);
@@ -64,7 +69,9 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
                 errno = EINVAL;
                 return false;
         }
-        retval &= com_send_server(send);
+        retval &= com_send(send);
+        if (current->current_q_level <= 2 && current->stage == INTERMEDIATE)
+            free(send->packet->data);
     }
     return retval;
 }
