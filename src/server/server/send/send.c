@@ -39,7 +39,7 @@ static bool send_flags(com_t* const send, const uint8_t flags) {
     send->packet->flags = flags;
     send->packet->nr = 0;
     send->packet->size = 0;
-    return com_send(send);
+    return com_send_server(send);
 }
 
 static bool send_batch(server_t* const server, com_t* const send, client_info_t* const client) {
@@ -79,7 +79,7 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
 
 static bool send_faulty(server_t* const server, com_t* const send, client_info_t* const client, const task_t* const task) {
     puts("########################");
-    puts("\nsend_faulty");
+    puts("send_faulty");
     uint8_t* faulty_queue = (uint8_t*) task->arg;
     bool retval = true;
     uint32_t batch_nr = *(uint32_t*) faulty_queue;
@@ -90,7 +90,6 @@ static bool send_faulty(server_t* const server, com_t* const send, client_info_t
     printf("ARG Batch Size: %lu\n", batch_size);
     if(batch_nr > client->batch_nr) {
         printf("Switch batch (%u > %u)\n", batch_nr, client->batch_nr);
-
         client->music_ptr += (batch_nr - client->batch_nr) * (client->packets_per_batch * client->music_chuck_size);
     }
 

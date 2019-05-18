@@ -31,9 +31,7 @@ static bool receive_and_check(server_t* const server, com_t* receive, client_inf
         case NO_MATCH:
             puts("rejected, clients full");
             *current = NULL;
-            return false;
-        default:
-            errno = EINVAL;
+            free(receive->packet->data);
             return false;
     }
     *current = client;

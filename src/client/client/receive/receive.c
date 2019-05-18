@@ -64,8 +64,8 @@ static void receive_correct(client_t* const client, uint8_t* buf, const size_t i
                     decompress(&com);
                 uint8_t* buf_ptr = buf + (com.packet->nr * constants_packets_size());
                 memcpy(buf_ptr, com.packet->data, constants_packets_size());
+                free(com.packet->data);
             }
-            free(com.packet->data);
             com_free(&com);
         }
         ptr = faulty_queue;
@@ -128,7 +128,8 @@ bool receive_ACK(const client_t* const client, bool consume) {
     bool ret = com_receive(&com, true);
     puts("receive_ack");
     bool is_ACK = flags_is_ACK(com.packet->flags);
-    free(com.packet->data);
+    if(ret)
+        free(com.packet->data);
     com_free(&com);
     return ret && is_ACK;
 }
@@ -139,7 +140,8 @@ bool receive_EOS(const client_t* const client, bool consume) {
     bool ret = com_receive(&com, false);
     printf("RECEIVE_EOS: %s\n", ret ? "TRUE" : "FALSE");
     bool is_EOS = flags_is_EOS(com.packet->flags);
-    free(com.packet->data);
+    if(ret)
+        free(com.packet->data);
     com_free(&com);
     return ret && is_EOS;
 }
