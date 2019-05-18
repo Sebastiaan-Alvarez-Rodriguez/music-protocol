@@ -68,12 +68,13 @@ static void process_intermediate(server_t* const server, com_t* const receive, c
         task->type = SEND_EOS;
     } else if(flags_is_RR(receive->packet->flags)) {
         task->type = SEND_BATCH;
-        client->music_ptr += client->packets_per_batch * client->music_chuck_size;
         client->packets_per_batch = constants_batch_packets_amount(client->quality->current);
-        puts("RR\n");
-        printf("Bytes sent: %u\n", client->bytes_sent);
-        printf("Total Bytes: %u\n", server->mf->payload_size);
-        printf("Batch size: %lu\n", client->packets_per_batch * client->music_chuck_size);
+        //TODO: ANDREW kijk - hieronder weg ge comment
+        // client->music_ptr += client->packets_per_batch * client->music_chuck_size;
+        puts("RR");
+        // printf("Bytes sent: %u\n", client->bytes_sent);
+        // printf("Total Bytes: %u\n", server->mf->payload_size);
+        // printf("Batch size: %lu\n", client->packets_per_batch * client->music_chuck_size);
         if(client->bytes_sent + (client->packets_per_batch * client->music_chuck_size) >= server->mf->payload_size)
             client->stage = FINAL;
     } else if(flags_is_REJ(receive->packet->flags)) {
@@ -87,7 +88,7 @@ static void process_intermediate(server_t* const server, com_t* const receive, c
         client->packets_per_batch = constants_batch_packets_amount(client->quality->current);
     }
 }
-
+    
 static void process_final(com_t* const receive, client_info_t* const client, task_t* const task) {
     if(!client->in_use || flags_is_RR(receive->packet->flags)) {
         task->type = SEND_EOS;
