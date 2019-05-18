@@ -1,6 +1,7 @@
 #include <netinet/in.h>
 
 #include <errno.h>
+#include <strings.h>
 #include "buffer/buffer.h"
 #include "client/client/client.h"
 #include "client/client/send/send.h"
@@ -13,15 +14,12 @@
 
 typedef struct {
     void* data_ptr;
-    uint8_t* recv_nrs;
+    bool* recv_nrs;
     uint8_t size_nrs;
 } raw_batch_t;
 
 static inline bool contains(raw_batch_t* raw, uint8_t item) {
-    for (uint8_t i = 0; i < raw->size_nrs; ++i)
-        if (((uint8_t*)raw->recv_nrs)[i] == item)
-            return true;
-    return false;
+    return raw->recv_nrs[item];
 }
 
 static inline uint8_t* raw_batch_get_missing_nrs(raw_batch_t* raw, uint8_t expected) {
@@ -38,7 +36,8 @@ static inline uint8_t* raw_batch_get_missing_nrs(raw_batch_t* raw, uint8_t expec
 
 static void raw_batch_init(raw_batch_t* raw, size_t expected_packet_amt) {
     raw->data_ptr = malloc(expected_packet_amt * constants_packets_size());
-    raw->recv_nrs = malloc(expected_packet_amt);
+    raw->recv_nrs = malloc(sizeof(bool)*expected_packet_amt);
+    bzero(raw->recv_nrs, sizeof(bool)*expected_packet_amt);
     raw->size_nrs = 0;
 }
 
@@ -60,7 +59,7 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
             client->quality->faulty += 1;
             continue;
         }
-        if ((client->batch_nr == 1) && com.packet->nr == 42 && i != 0)
+        if ((client->batch_nr == 7) && com.packet->nr == 42 && i != 0)
             continue;
         else if (com.packet->nr == 42 && i == 0) {
             printf("receiving packet 42.\nAmount left: %lu\n", 
@@ -69,12 +68,15 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
             //     printf("Already have: %u\n", raw->recv_nrs[i]);
             // }
         }
-
+        if (i != com.packet->nr)
+            printf("WEIRDNESS: Did not receive packet %u\n", i);
+        if (com.packet->flags != 0)
+            printf("WEIRDNESS: Packet had flag %u\n", com.packet->flags);
         if (quality_suggest_compression(client->quality))
             decompress(&com);
 
         uint8_t* buf_ptr = (uint8_t*) raw->data_ptr + com.packet->nr * constants_packets_size();
-        raw->recv_nrs[raw->size_nrs] = com.packet->nr;
+        raw->recv_nrs[com.packet->nr] = true;
         raw->size_nrs += 1;
         memcpy(buf_ptr, com.packet->data, com.packet->size);
         free(com.packet->data);
@@ -100,17 +102,15 @@ static inline bool raw_batch_integrity_ok(const client_t* const client, raw_batc
 }
 
 void receive_batch(client_t* const client) {
-    // Request batch
-    puts("New batch");
     send_RR(client);
-    if (receive_EOS(client, false)) {
-        client->EOS_received = true;
-        return;
-    }
-    printf("Receiving %lu packets\n", constants_batch_packets_amount(client->quality->current));
     raw_batch_t raw;
     raw_batch_init(&raw, constants_batch_packets_amount(client->quality->current));
     do {
+        if (receive_EOS(client, false)) {
+            client->EOS_received = true;
+            raw_batch_free(&raw);
+            return;
+        }
         raw_batch_receive(client, &raw);
     } while (!raw_batch_integrity_ok(client, &raw));
     client->quality->ok += constants_batch_packets_amount(client->quality->current);

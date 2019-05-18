@@ -44,18 +44,16 @@ size_t calculate_packet_size(const size_t buffer_size, const size_t batch_size) 
 
 void print_client_info(const client_info_t* const client) {
     if (client->in_use)
-        printf("Client: {in_use : %u}, {ip : %s}, {port : %u}, {batch_nr : %u}, {current_q_level : %u}",
+        printf("Client: {in_use : %u}, {ip : %s}, {port : %u}, {current_q_level : %u}",
                 client->in_use, 
                 inet_ntoa(client->client_addr.sin_addr), 
-                ntohs(client->client_addr.sin_port), 
-                client->batch_ready, 
+                ntohs(client->client_addr.sin_port),  
                 client->quality->current);
     else
-        printf("Client: {in_use : %u}, {ip : %s}, {port : %u}, {batch_nr : %u}, {current_q_level : -}",
+        printf("Client: {in_use : %u}, {ip : %s}, {port : %u}, {current_q_level : -}",
                 client->in_use, 
                 inet_ntoa(client->client_addr.sin_addr), 
-                ntohs(client->client_addr.sin_port), 
-                client->batch_ready);
+                ntohs(client->client_addr.sin_port));
 }
 
 void client_info_free(client_info_t* const client) {
