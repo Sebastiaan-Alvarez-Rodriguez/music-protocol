@@ -27,7 +27,7 @@ static inline uint8_t* raw_batch_get_missing_nrs(raw_batch_t* raw, uint8_t expec
     uint8_t* not_containing_ptr = not_containing;
     for (uint8_t i = 0; i < expected; ++i)
         if (!contains(raw, i)) {
-            printf("Found missing: %u.\n", i);
+            // printf("Found missing: %u.\n", i);
             *not_containing_ptr = i;
             ++not_containing_ptr;
         }
@@ -53,23 +53,25 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
         com_init(&com, client->fd, MSG_WAITALL, client->sock, FLAG_NONE, 0);
         enum recv_flag flag = com_receive(&com);
         if (flag == RECV_TIMEOUT) {
-            client->quality->lost = (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved) - i;
+            client->quality->lost += (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved) - i;
+            printf("OHNO, I lost %lu packets!", (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved) - i);
             break;
         } else if (flag == RECV_FAULTY) {
             client->quality->faulty += 1;
+            puts("OHNO, I got faulty packet");
             continue;
         }
-        if ((client->batch_nr == 7) && com.packet->nr == 42 && i != 0)
-            continue;
-        else if (com.packet->nr == 42 && i == 0) {
-            printf("receiving packet 42.\nAmount left: %lu\n", 
-                (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved) -1);
-            // for (unsigned i = 0; i < raw->size_nrs; ++i) {
-            //     printf("Already have: %u\n", raw->recv_nrs[i]);
-            // }
-        }
-        if (i != com.packet->nr)
-            printf("WEIRDNESS: Did not receive packet %u\n", i);
+        // if (com.packet->nr == 42 && i != 0)
+        //     continue;
+        // else if (com.packet->nr == 42 && i == 0) {
+        //     printf("receiving packet 42.\nAmount left: %lu\n", 
+        //         (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved) -1);
+        //     // for (unsigned i = 0; i < raw->size_nrs; ++i) {
+        //     //     printf("Already have: %u\n", raw->recv_nrs[i]);
+        //     // }
+        // }
+        // // if (i != com.packet->nr)
+        // //     printf("WEIRDNESS: Did not receive packet %u\n", i);
         if (com.packet->flags != 0)
             printf("WEIRDNESS: Packet had flag %u\n", com.packet->flags);
         if (quality_suggest_compression(client->quality))

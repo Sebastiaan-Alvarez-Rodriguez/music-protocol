@@ -84,6 +84,7 @@ static void process_intermediate(server_t* const server, com_t* const receive, c
     } else if(flags_is_QTY(receive->packet->flags)) {
         task->type = SEND_ACK;
         client->quality->current = *(uint8_t*) receive->packet->data;
+        client->packets_per_batch = constants_batch_packets_amount(client->quality->current);
     }
 }
 
