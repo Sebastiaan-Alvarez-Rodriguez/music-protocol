@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
+#include <sys/time.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -30,6 +31,19 @@ static void connect_server(client_t* const client, const char* address, const un
                 exit(-1);
         }
     } while (retry);
+    struct timeval time;
+    time.tv_sec = 0;
+    time.tv_usec = 100;
+    do {
+        retry = false;
+        if(setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &time, sizeof(struct timeval)) < 0) {
+            perror("Socket Opt");
+            if (menu_yes_no("Retry?"))
+                retry = true;
+            else
+                exit(-1);
+        }
+    } while(retry);
     do {
         retry = false;
         struct sockaddr_in* addr_in = (struct sockaddr_in*) client->sock;
