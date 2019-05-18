@@ -30,9 +30,9 @@ void run(const char* address, const unsigned short port, const unsigned buffer_s
     while(!client.EOS_received) {
         while (buffer_free_size(client.player->buffer) < constants_batch_packets_amount(client.quality->current))
             player_play(client.player);
-        
+
         receive_batch(&client);
-        client_adjust_quality(&client);
+        //client_adjust_quality(&client);
     }
     // Play the last buffered music
     while (!buffer_empty(client.player->buffer))

@@ -25,10 +25,11 @@ static inline bool contains(raw_batch_t* raw, uint8_t item) {
 }
 
 static inline uint8_t* raw_batch_get_missing_nrs(raw_batch_t* raw, uint8_t expected) {
-    uint8_t* not_containing = malloc((expected - raw->size_nrs) + 1);
+    uint8_t* not_containing = malloc(sizeof(uint8_t)*(expected - raw->size_nrs));
     uint8_t* not_containing_ptr = not_containing;
     for (uint8_t i = 0; i < expected; ++i)
         if (!contains(raw, i)) {
+            printf("Found missing: %u.\n", i);
             *not_containing_ptr = i;
             ++not_containing_ptr;
         }
@@ -46,21 +47,7 @@ static void raw_batch_free(raw_batch_t* raw) {
     free(raw->recv_nrs);
 }
 
-static inline bool raw_batch_integrity_ok(const client_t* const client, raw_batch_t* raw) {
-    if (raw->size_nrs != constants_batch_packets_amount(client->quality->current)) {
-        printf("I miss packets! QTY: %u. Expected: %lu. Got: %u.", 
-            client->quality->current, 
-            constants_batch_packets_amount(client->quality->current),
-            raw->size_nrs);
-        uint8_t* missing = raw_batch_get_missing_nrs(raw,constants_batch_packets_amount(client->quality->current));
-        send_REJ(client, constants_batch_packets_amount(client->quality->current) - raw->size_nrs, missing);
-        free(missing);
-        return false;
-    }
-    return true;
-}
-
-static raw_batch_t* raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
+static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
     uint8_t initial_size_retrieved = raw->size_nrs;
     for (unsigned i = 0; i < (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved); ++i) {
         com_t com;
@@ -73,6 +60,15 @@ static raw_batch_t* raw_batch_receive(const client_t* const client, raw_batch_t*
             client->quality->faulty += 1;
             continue;
         }
+        if ((client->batch_nr == 1) && com.packet->nr == 42 && i != 0)
+            continue;
+        else if (com.packet->nr == 42 && i == 0) {
+            printf("receiving packet 42.\nAmount left: %lu\n", 
+                (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved) -1);
+            // for (unsigned i = 0; i < raw->size_nrs; ++i) {
+            //     printf("Already have: %u\n", raw->recv_nrs[i]);
+            // }
+        }
 
         if (quality_suggest_compression(client->quality))
             decompress(&com);
@@ -84,16 +80,34 @@ static raw_batch_t* raw_batch_receive(const client_t* const client, raw_batch_t*
         free(com.packet->data);
         com_free(&com);
     }
-    return raw;
+}
+
+static inline bool raw_batch_integrity_ok(const client_t* const client, raw_batch_t* raw) {
+    if (raw->size_nrs != constants_batch_packets_amount(client->quality->current)) {
+        printf("I miss packets! QTY: %u. Expected: %lu. Got: %u.\n", 
+            client->quality->current, 
+            constants_batch_packets_amount(client->quality->current),
+            raw->size_nrs);
+        uint8_t* missing = raw_batch_get_missing_nrs(raw,constants_batch_packets_amount(client->quality->current));
+        printf("Send REJ for %lu packets.\n", constants_batch_packets_amount(client->quality->current) - raw->size_nrs);
+        send_REJ(client, constants_batch_packets_amount(client->quality->current) - raw->size_nrs, missing);
+        free(missing);
+        puts("Integrity failure");
+        return false;
+    }
+    puts("Integrity ok");
+    return true;
 }
 
 void receive_batch(client_t* const client) {
     // Request batch
+    puts("New batch");
     send_RR(client);
     if (receive_EOS(client, false)) {
         client->EOS_received = true;
         return;
     }
+    printf("Receiving %lu packets\n", constants_batch_packets_amount(client->quality->current));
     raw_batch_t raw;
     raw_batch_init(&raw, constants_batch_packets_amount(client->quality->current));
     do {
