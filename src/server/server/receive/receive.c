@@ -33,9 +33,7 @@ static bool receive_and_check(server_t* const server, com_t* receive, client_inf
         case NO_MATCH:
             puts("rejected, clients full");
             *current = NULL;
-            return false;
-        default:
-            errno = EINVAL;
+            free(receive->packet->data);
             return false;
     }
     *current = client;
@@ -80,7 +78,9 @@ static void process_intermediate(server_t* const server, com_t* const receive, c
             client->stage = FINAL;
     } else if(flags_is_REJ(receive->packet->flags)) {
         task->type = SEND_FAULTY;
-        task->arg = receive->packet->data;
+        task->arg_size = receive->packet->size;
+        task->arg = malloc(receive->packet->size);
+        memcpy(task->arg, receive->packet->data, task->arg_size);
     } else if(flags_is_QTY(receive->packet->flags)) {
         task->type = SEND_ACK;
         client->quality->current = *(uint8_t*) receive->packet->data;
@@ -96,7 +96,9 @@ static void process_final(com_t* const receive, client_info_t* const client, tas
         puts("dd");
     } else if (flags_is_REJ(receive->packet->flags)) {
         task->type = SEND_FAULTY;
-        task->arg = receive->packet->data;
+        task->arg_size = receive->packet->size;
+        task->arg = malloc(receive->packet->size);
+        memcpy(task->arg, receive->packet->data, task->arg_size);
     }
 }
 
@@ -121,6 +123,7 @@ bool receive_from_client(server_t* const server, com_t* receive, client_info_t**
             return false;
     }
     printf("Client in use: %s\n", client->in_use ? "TRUE" : "FALSE");
+    free(receive->packet->data);
     *current = client;
     return true;
 }

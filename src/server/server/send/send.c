@@ -64,11 +64,11 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
 }
 
 static bool send_faulty(server_t* const server, com_t* const send, client_info_t* const current, const task_t* const task) {
-    uint16_t* faulty_ptr = (uint16_t*) task->arg;
+    uint8_t* faulty_ptr = (uint8_t*) task->arg;
     bool retval = true;
     uint32_t batch_nr = *(uint32_t*) faulty_ptr;
-    faulty_ptr += 2;
-    uint16_t batch_size = (task->arg_size - sizeof(uint32_t) / sizeof(uint16_t));
+    faulty_ptr += 4;
+    uint16_t batch_size = (task->arg_size - sizeof(uint32_t) / sizeof(uint8_t));
 
     for(unsigned i = 0; i < batch_size && faulty_ptr; ++i) {
         switch(current->stage) {

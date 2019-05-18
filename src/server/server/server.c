@@ -69,6 +69,8 @@ void server_run(server_t* const server) {
         receive_from_client(server, &com, &current_client, &task);
         send_to_client(server, &com, current_client, &task);
         print_clients(server);
+        if(task.type == SEND_FAULTY)
+            free(task.arg);
         com_free(&com);
     }
 }
