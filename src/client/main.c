@@ -28,10 +28,11 @@ void run(const char* address, const unsigned short port, const unsigned buffer_s
     client_fill_initial_buffer(&client);
 
     while(!client.EOS_received) {
-        while (buffer_free_size(client.player->buffer) < constants_batch_packets_amount(client.quality))
+        while (buffer_free_size(client.player->buffer) < constants_batch_packets_amount(client.quality->current))
             player_play(client.player);
-        
+
         receive_batch(&client);
+        client_adjust_quality(&client);
     }
     // Play the last buffered music
     while (!buffer_empty(client.player->buffer))
@@ -42,7 +43,7 @@ void run(const char* address, const unsigned short port, const unsigned buffer_s
 
 int main(int argc, char **argv) {
     const char* const prog_name = argv[0];
-    unsigned buffer_size = 1024;
+    size_t buffer_size = constants_batch_size(5);
     uint8_t initial_quality = 3;
     char* server_address = "127.0.0.1";
     unsigned short bind_port = 1235;
@@ -52,9 +53,16 @@ int main(int argc, char **argv) {
         switch (c) {
             case 'b':
                 if (*optarg >= '1') {
-                    buffer_size = atoi(optarg);
-                    printf("Buffersize set to %u\n", buffer_size);
-                    buffer_size *= 1024;
+                    size_t tmp_size = atoi(optarg);
+                    if (tmp_size * 1024 >= buffer_size) {
+                        printf("Buffersize set to %lu\n", tmp_size);
+                        buffer_size = tmp_size * 1024;
+                    } else {
+                        puts("Buffer must at least contain one max batch.");
+                        printf("At this point, the size of max batch is approx. %lu KB.\n", constants_batch_size(5)/1024 + 1);
+                        puts("If this means that you cannot use this framework on your microwave, we are very sorry.");
+                        return -1;
+                    }
                 } else {
                     puts("Provide a bufferspace >= 1");
                     return -1;
@@ -66,7 +74,7 @@ int main(int argc, char **argv) {
                     printf("Quality set to %u\n", initial_quality);
                 }
                 else {
-                    puts("Your quality level must be within [1-5]");
+                    puts("Your quality level must be within [1-5].");
                     return -1;
                 }
                 break;
@@ -86,6 +94,7 @@ int main(int argc, char **argv) {
     argc -= optind;
     argv += optind;
 
+    printf("Buffersize is set to approx. %lu KB.\n", buffer_size/1024);
     run(server_address, bind_port, buffer_size, initial_quality);
     return 0;
 }

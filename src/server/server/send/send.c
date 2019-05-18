@@ -6,6 +6,7 @@
 #include "send.h"
 #include "communication/faulty/faulty.h"
 #include "communication/flags/flags.h"
+#include "communication/quality/quality.h"
 #include "compression/compress.h"
 #include "server/client_info/client_info.h"
 
@@ -57,11 +58,13 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
     for(unsigned i = 0; i < client->packets_per_batch; ++i) {
         switch(client->stage) {
             case INTERMEDIATE:
-                prepare_intermediate(send, client, i);
-                if (client->current_q_level == 1)
+                prepare_intermediate(send, current, i);
+                if (quality_suggest_downsampling(current->quality))
                     downsample(send, 8);
-                if (client->current_q_level <= 2)
+                if (quality_suggest_compression(current->quality))
                     compress(send);
+                //TODO: ANDREW kijk
+                
                 break;
             case FINAL:
                 prepare_final(server, send, client, nums[i]);
@@ -70,34 +73,31 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
                 errno = EINVAL;
                 return false;
         }
-        retval &= com_send_server(send);
-        if (client->current_q_level <= 2 && client->stage == INTERMEDIATE)
+        retval &= com_send(send);
+        if (current->stage == INTERMEDIATE && (
+            quality_suggest_downsampling(current->quality)
+            || quality_suggest_compression(current->quality)))
             free(send->packet->data);
     }
+    current->music_ptr += current->packets_per_batch * current->music_chuck_size;
     return retval;
 }
 
-static bool send_faulty(server_t* const server, com_t* const send, client_info_t* const client, const task_t* const task) {
-    puts("########################");
-    puts("send_faulty");
-    uint8_t* faulty_queue = (uint8_t*) task->arg;
+static bool send_faulty(server_t* const server, com_t* const send, client_info_t* const current, const task_t* const task) {
+    uint8_t* faulty_ptr = (uint8_t*) task->arg;
     bool retval = true;
-    uint32_t batch_nr = *(uint32_t*) faulty_queue;
-    faulty_queue += 4;
-    size_t batch_size = (task->arg_size - sizeof(uint32_t)) / sizeof(uint8_t);
-    printf("ARG Size: %lu\n", task->arg_size);
-    printf("ARG Batch nr: %u\n", batch_nr);
-    printf("ARG Batch Size: %lu\n", batch_size);
-    if(batch_nr > client->batch_nr) {
-        printf("Switch batch (%u > %u)\n", batch_nr, client->batch_nr);
-        client->music_ptr += (batch_nr - client->batch_nr) * (client->packets_per_batch * client->music_chuck_size);
-    }
+    uint32_t batch_nr = *(uint32_t*) faulty_ptr;
+    faulty_ptr += 4;
+    uint16_t batch_size = (task->arg_size - sizeof(uint32_t) / sizeof(uint8_t));
 
     for(unsigned i = 0; i < batch_size; ++i) {
         // printf("faulty_nr: %u\n", *faulty_queue);
         switch(client->stage) {
             case INTERMEDIATE:
-                prepare_intermediate(send, client, *faulty_queue);
+            //TODO: ANDREW kijk
+                current->music_ptr -= current->packets_per_batch * current->music_chuck_size;
+                prepare_intermediate(send, current, *faulty_ptr);
+                current->music_ptr += current->packets_per_batch * current->music_chuck_size;
                 break;
             case FINAL:
                 prepare_final(server, send, client, *faulty_queue);

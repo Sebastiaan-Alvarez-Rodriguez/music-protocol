@@ -5,10 +5,11 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
+#include <stdbool.h>
 #include <stddef.h>
-
-
 #include "communication/com.h"
+#include "communication/quality/quality.h"
 
 typedef enum {
     INITIAL,
@@ -21,9 +22,9 @@ typedef struct {
 
    stage_t stage;
 
-   unsigned in_use : 1;
-   unsigned current_q_level : 4;
-
+   bool in_use;
+   bool batch_ready;
+   quality_t* quality;
    struct timeval timeout_timer;
 
    uint32_t bytes_sent;
@@ -49,4 +50,5 @@ size_t calculate_packet_size(const size_t buffer_size, const size_t batch_size);
 // Prints a client_info struct
 void print_client_info(const client_info_t* const client);
 
+void client_info_free(client_info_t* const client);
 #endif

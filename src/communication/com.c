@@ -130,7 +130,7 @@ __attribute__ ((unused)) static void print_bits(const size_t size, const void* c
 }
 
 //Print all bits for given size in buffer. assumes little endian
-static void print_hex(const size_t size, const void* const ptr) {
+__attribute__ ((unused)) static void print_hex(const size_t size, const void* const ptr) {
     uint8_t* hexptr = (uint8_t*) ptr;
 
     for (int i=size-1;i>=0;i--) {
@@ -205,47 +205,46 @@ bool com_send(const com_t* const com) {
     return ret;
 }
 
-bool com_receive(com_t* const com, const bool consume_if_fail) {
+enum recv_flag com_receive(com_t* const com) {
     void* check_buf = malloc(sizeof(uint16_t)*4);
     if (check_buf == NULL || errno == ENOMEM)
-        return false;
+        return RECV_ERROR;
 
     //Peek at checksum1 and size and checksum2
-    if(recvfrom(com->sockfd, check_buf, sizeof(uint16_t)*4, MSG_PEEK, com->address, &com->addr_len) < 0)
-        return false;
+    if(recvfrom(com->sockfd, check_buf, sizeof(uint16_t)*4, MSG_PEEK, com->address, &com->addr_len) < 0) {
+        free(check_buf);
+        if (errno == EAGAIN) { //we had a timeout
+            errno = 0;
+            return RECV_TIMEOUT;
+        }
+        return RECV_ERROR;
+    }
+    
     uint16_t checksum1 = buf_get_checksum1(check_buf);
     uint16_t size = buf_get_size(check_buf);
     uint8_t flags = buf_get_flags(check_buf);
     uint8_t packetnr = buf_get_packetnr(check_buf);
     uint16_t checksum2 = buf_get_checksum2(check_buf);
-
+    free(check_buf);
     //Checksum control for checksum 1
     uint16_t test_checksum1 = make_checksum1(size, flags, packetnr, checksum2);
     if (checksum1 != test_checksum1) {
         printf("Checksum1 mismatch! Expected %#8X, got %#8X\n", checksum1, test_checksum1);
-        struct sockaddr temp;
-        size_t temp_len = sizeof(temp);
-        if(consume_if_fail) {
-            recvfrom(com->sockfd, check_buf, 0, 0, &temp, (socklen_t*)&temp_len);
-        }
-        free(check_buf);
-        return false;
+        return RECV_FAULTY;
     }
-    free(check_buf);
 
     //Get all received data
     void* full_data = malloc(sizeof(uint16_t)*4+size);
     if (full_data == NULL || errno == ENOMEM)
-        return false;
+        return RECV_ERROR;
     if(recvfrom(com->sockfd, full_data, sizeof(uint16_t)*4+size, com->flags, com->address, &com->addr_len) < 0)
-        return false;
+        return RECV_ERROR;
 
     //Checksum control for checksum2
     uint16_t test_checksum2 = make_checksum2(buf_get_data(full_data), size);
     if (checksum2 != test_checksum2) {
-        printf("Checksum2 mismatch! Expected %#8X, got %#8X\n", checksum2, test_checksum2);
-        printf("c2 packet_nr[%u]\n", packetnr);
-        return false;
+        printf("Checksum2 mismatch! Expected %#8X, got %#8X", checksum2, test_checksum2);
+        return RECV_FAULTY;
     }
 
     if(!convert_recv(com->packet, full_data, size, flags, packetnr)) {
@@ -262,7 +261,7 @@ bool com_receive(com_t* const com, const bool consume_if_fail) {
     // printf("Raw data:"); print_hex(com->packet->size + sizeof(uint16_t)*4, com->packet);
     // puts("--------------");
 
-    return true;
+    return RECV_OK;
 }
 
 bool com_receive_peek(const com_t* const com) {

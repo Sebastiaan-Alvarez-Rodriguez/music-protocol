@@ -7,7 +7,7 @@ void receive_batch(client_t* const client);
 
 // Check if a ACK was received
 // consume determines whether received packet(s) should be consumed
-bool receive_ACK(const client_t* const client, bool consume);
+enum recv_flag receive_ACK(const client_t* const client, bool consume);
 
 // Check if a EOS was received
 // consume determines whether received packet(s) should be consumed

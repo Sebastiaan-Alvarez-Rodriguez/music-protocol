@@ -57,7 +57,6 @@ static void unpack_128bit(const void* const data, void* const new_data) {
     *new_ptr = *data_ptr << 2;
 }
 
-
 void compress(com_t* const com) {
     uint16_t pairs_128_bits = com->packet->size / 16;//256/16=16
     void* new_data = malloc(pairs_128_bits*14);//16*14=224
@@ -87,9 +86,6 @@ void decompress(com_t* const com) {
     com->packet->size = pairs_112_bits*16;
 }
 
-// Give a com you want to send, and a n > 1
-// Throw away 1 frame every n frames
-// Remember, make sure n > 1
 void downsample(com_t* const com, const size_t n) {
     const uint8_t frame_length = 16*2;
     const uint16_t newsize = (com->packet->size / n) * (n-1);
@@ -110,4 +106,3 @@ void downsample(com_t* const com, const size_t n) {
     com->packet->size = newsize;
     com->packet->data = compressed;
 }
-

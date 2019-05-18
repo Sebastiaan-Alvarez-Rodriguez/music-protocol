@@ -20,6 +20,12 @@ typedef struct {
     socklen_t addr_len;
 } com_t;
 
+enum recv_flag {
+    RECV_OK,
+    RECV_ERROR,
+    RECV_FAULTY,
+    RECV_TIMEOUT
+};
 // Initialize a com-struct
 void com_init(com_t* const com, unsigned sockfd, int flags, struct sockaddr* const address, uint8_t packet_flags, uint8_t packetnr);
 
@@ -32,8 +38,8 @@ bool com_send_server(const com_t* const com);
 bool com_send(const com_t* const com);
 
 // Receive a packet from server
-// Returns true on success, false otherwise (checksum fail or malloc fail)
-bool com_receive(com_t* const com, const bool consume_if_fail);
+// Returns RECV_OK on success, TIMEOUT/ERROR otherwise
+enum recv_flag com_receive(com_t* const com);
 
 // Wait until a packet from server is received (or timeout)
 // Returns true upon successful receive, false otherwise

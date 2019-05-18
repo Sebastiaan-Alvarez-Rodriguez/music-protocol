@@ -48,7 +48,6 @@ void player_init(player_t* const player, const size_t max_elems, const size_t el
 }
 
 void player_play(player_t* const player) {
-
     /* write frames to ALSA */
     void* data = buffer_get(player->buffer);
     snd_pcm_sframes_t frames = snd_pcm_writei(player->snd_handle, data, player->buffer->elem_size / 4);
