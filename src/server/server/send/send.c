@@ -47,7 +47,7 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
                 if (quality_suggest_compression(current->quality))
                     compress(send);
                 //TODO: ANDREW kijk
-                current->music_ptr += current->packets_per_batch * current->music_chuck_size;
+                
                 break;
             case FINAL:
                 prepare_final(server, send, current, i);
@@ -62,6 +62,7 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
             || quality_suggest_compression(current->quality)))
             free(send->packet->data);
     }
+    current->music_ptr += current->packets_per_batch * current->music_chuck_size;
     return retval;
 }
 
