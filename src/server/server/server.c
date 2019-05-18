@@ -68,10 +68,15 @@ void server_run(server_t* const server) {
         client_info_t* current_client = NULL;
         com_init(&com, server->fd, MSG_WAITALL, (struct sockaddr*) &address, 0, 0);
 
+        puts("--------------------------------");
+        puts("Cycle start");
         if(receive_from_client(server, &com, &current_client, &task)) {
             send_to_client(server, &com, current_client, &task);
         }
+        puts("Cycle finished");
+        puts("--------------------------------\n");
         // print_clients(server);
+        task_free(&task);
         com_free(&com);
     }
 }

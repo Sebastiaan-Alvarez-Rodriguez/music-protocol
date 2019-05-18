@@ -17,11 +17,11 @@ void randomize_packet_order(unsigned* const packet_nrs, const size_t batch_len, 
         if(probability_swapped < probability)
             swap(packet_nrs, packet_nrs[i], packet_nrs[rand() % batch_len]);
     }
-    printf("[");
-    for(unsigned i = 0; i < batch_len; ++i) {
-        printf("%u,", packet_nrs[i]);
-    }
-    puts("]");
+    // printf("[");
+    // for(unsigned i = 0; i < batch_len; ++i) {
+    //     printf("%u,", packet_nrs[i]);
+    // }
+    // puts("]");
 }
 
 // Get checksum1 from raw buffer
@@ -60,17 +60,18 @@ static uint16_t* buf_get_checksum2(void* buf) {
 // Get data-pointer from raw buffer
 static uint8_t* buf_get_data(void* buf, const size_t byte_pos) {
     uint8_t* pointer = buf;
-    pointer += 8;
-    return pointer + (sizeof(uint8_t) * byte_pos);
+    pointer += 8 + byte_pos;
+    return pointer;
 }
 
 void flip_random_bits(const size_t size_data, void* const data, const size_t num_bits, const float probability) {
     for(unsigned i = 0; i < num_bits; ++i) {
         uint8_t section = rand() % 6;
-        printf("section: %u\n", section);
+        // printf("section: %u\n", section);
         float bit_prob = (float)((rand() % 101) / 100.0f);
-        printf("%f < %f = %s\n", bit_prob, probability, bit_prob < probability ? "TRUE" : "FALSE");
+        // printf("%f < %f = %s\n", bit_prob, probability, bit_prob < probability ? "TRUE" : "FALSE");
         if(bit_prob < probability) {
+
             switch (section) {
                 case 0:
                     (*buf_get_checksum1(data)) ^= (1UL << (rand() % 16));
@@ -88,7 +89,7 @@ void flip_random_bits(const size_t size_data, void* const data, const size_t num
                     (*buf_get_checksum2(data)) ^= (1UL << (rand() % 16));
                     break;
                 case 5:
-                    (*buf_get_data(data, (rand() % size_data))) ^= (1UL << (rand() % 8));
+                    (*buf_get_data(data, rand() % size_data)) ^= (1UL << (rand() % 8));
                     break;
             }
         }

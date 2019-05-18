@@ -9,6 +9,7 @@
 #include "communication/packet/packet.h"
 #include "communication/checksums/checksum.h"
 #include "communication/faulty/faulty.h"
+#include "communication/flags/flags.h"
 #include "com.h"
 
 #define SIMULATIONS
@@ -166,8 +167,8 @@ bool com_send_server(const com_t* const com) {
     }
 
     #ifdef SIMULATIONS
-        flip_random_bits(size, buf, 1, 0.001f);
-        puts("sim");
+        if(!flags_is_ACK(com->packet->flags))
+            flip_random_bits(size, buf, 10, 0.5f);
     #endif
 
     bool ret = sendto(com->sockfd, buf, size, com->flags, com->address, com->addr_len) >= 0;
@@ -204,7 +205,7 @@ bool com_send(const com_t* const com) {
     return ret;
 }
 
-bool com_receive(com_t* const com) {
+bool com_receive(com_t* const com, const bool consume_if_fail) {
     void* check_buf = malloc(sizeof(uint16_t)*4);
     if (check_buf == NULL || errno == ENOMEM)
         return false;
@@ -222,8 +223,11 @@ bool com_receive(com_t* const com) {
     uint16_t test_checksum1 = make_checksum1(size, flags, packetnr, checksum2);
     if (checksum1 != test_checksum1) {
         printf("Checksum1 mismatch! Expected %#8X, got %#8X\n", checksum1, test_checksum1);
-        printf("c1 packet_nr[%u]\n", packetnr);
-        recvfrom(com->sockfd, check_buf, sizeof(uint16_t)*4, MSG_WAITALL, com->address, &com->addr_len);
+        struct sockaddr temp;
+        size_t temp_len = sizeof(temp);
+        if(consume_if_fail) {
+            recvfrom(com->sockfd, check_buf, 0, 0, &temp, (socklen_t*)&temp_len);
+        }
         free(check_buf);
         return false;
     }
@@ -244,7 +248,9 @@ bool com_receive(com_t* const com) {
         return false;
     }
 
-    convert_recv(com->packet, full_data, size, flags, packetnr);
+    if(!convert_recv(com->packet, full_data, size, flags, packetnr)) {
+        printf("convert_recv failed\n");
+    }
     free(full_data);
 
     // puts("-----RECV-----");

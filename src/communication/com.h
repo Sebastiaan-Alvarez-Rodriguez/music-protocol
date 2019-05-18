@@ -33,7 +33,7 @@ bool com_send(const com_t* const com);
 
 // Receive a packet from server
 // Returns true on success, false otherwise (checksum fail or malloc fail)
-bool com_receive(com_t* const com);
+bool com_receive(com_t* const com, const bool consume_if_fail);
 
 // Wait until a packet from server is received (or timeout)
 // Returns true upon successful receive, false otherwise

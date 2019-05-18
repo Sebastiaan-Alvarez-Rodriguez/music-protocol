@@ -22,13 +22,13 @@ typedef struct {
    stage_t stage;
 
    unsigned in_use : 1;
-   unsigned batch_ready : 1;
    unsigned current_q_level : 4;
 
    struct timeval timeout_timer;
 
    uint32_t bytes_sent;
    size_t packets_per_batch;
+   uint32_t batch_nr;
 
    size_t buffer_size;
    size_t music_chuck_size;
