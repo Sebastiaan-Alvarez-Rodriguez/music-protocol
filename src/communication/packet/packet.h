@@ -12,4 +12,7 @@ typedef struct {
 // Initialize a packet_t-struct
 void packet_init(packet_t* const packet, uint8_t flags, uint8_t packetnr);
 
+// Reset a packet;
+void packet_reset(packet_t* const packet);
+
 #endif

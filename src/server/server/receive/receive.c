@@ -124,6 +124,7 @@ bool receive_from_client(server_t* const server, com_t* receive, client_info_t**
     }
     printf("Client in use: %s\n", client->in_use ? "TRUE" : "FALSE");
     free(receive->packet->data);
+    packet_reset(receive->packet);
     *current = client;
     return true;
 }
