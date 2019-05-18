@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include "communication/flags/flags.h"
+#include "communication/quality/quality.h"
 #include "compression/compress.h"
 #include "server/client_info/client_info.h"
 
@@ -41,10 +42,12 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
         switch(current->stage) {
             case INTERMEDIATE:
                 prepare_intermediate(send, current, i);
-                if (current->current_q_level == 1)
+                if (quality_suggest_downsampling(current->quality))
                     downsample(send, 8);
-                if (current->current_q_level <= 2)
+                if (quality_suggest_compression(current->quality))
                     compress(send);
+                //TODO: ANDREW kijk
+                
                 break;
             case FINAL:
                 prepare_final(server, send, current, i);
@@ -54,23 +57,29 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
                 return false;
         }
         retval &= com_send(send);
-        if (current->current_q_level <= 2 && current->stage == INTERMEDIATE)
+        if (current->stage == INTERMEDIATE && (
+            quality_suggest_downsampling(current->quality)
+            || quality_suggest_compression(current->quality)))
             free(send->packet->data);
     }
+    current->music_ptr += current->packets_per_batch * current->music_chuck_size;
     return retval;
 }
 
 static bool send_faulty(server_t* const server, com_t* const send, client_info_t* const current, const task_t* const task) {
-    uint16_t* faulty_ptr = (uint16_t*) task->arg;
+    uint8_t* faulty_ptr = (uint8_t*) task->arg;
     bool retval = true;
     uint32_t batch_nr = *(uint32_t*) faulty_ptr;
-    faulty_ptr += 2;
-    uint16_t batch_size = (task->arg_size - sizeof(uint32_t) / sizeof(uint16_t));
+    faulty_ptr += 4;
+    uint16_t batch_size = (task->arg_size - sizeof(uint32_t) / sizeof(uint8_t));
 
     for(unsigned i = 0; i < batch_size && faulty_ptr; ++i) {
         switch(current->stage) {
             case INTERMEDIATE:
+            //TODO: ANDREW kijk
+                current->music_ptr -= current->packets_per_batch * current->music_chuck_size;
                 prepare_intermediate(send, current, *faulty_ptr);
+                current->music_ptr += current->packets_per_batch * current->music_chuck_size;
                 break;
             case FINAL:
                 prepare_final(server, send, current, *faulty_ptr);

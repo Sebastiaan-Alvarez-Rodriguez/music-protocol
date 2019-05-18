@@ -6,9 +6,9 @@
 #include <stdbool.h>
 
 #include "communication/com.h"
+#include "server/client_info/client_info.h"
 #include "server/server/server.h"
 #include "server/server/task/task.h"
-#include "server/client_info/client_info.h"
 
 // Receives a packet from a client and processes the request, setting
 // the current pointer to the current connected client

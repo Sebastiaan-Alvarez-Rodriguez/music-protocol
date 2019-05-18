@@ -17,17 +17,21 @@ inline bool flags_is_NONE(uint8_t rawflags) {
 }
 
 inline bool flags_is_ACK(uint8_t rawflags) {
-    return (rawflags & 0x1) == 1;
+    return rawflags & 0x01;
 }
 
 inline bool flags_is_REJ(uint8_t rawflags) {
-    return ((rawflags & 0x2) >> 1) == 1;
+    return rawflags & 0x02;
 }
 
 inline bool flags_is_RR(uint8_t rawflags) {
-    return ((rawflags & 0x4) >> 2) == 1;
+    return rawflags & 0x04;
+}
+
+inline bool flags_is_QTY(uint8_t rawflags) {
+    return rawflags & 0x08;
 }
 
 inline bool flags_is_EOS(uint8_t rawflags) {
-    return ((rawflags & 0x8) >> 3) == 1;
+    return rawflags & 0x10;
 }

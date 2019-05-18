@@ -4,11 +4,12 @@
 #include <stdint.h>
 
 enum flags {
-    FLAG_NONE= 0x0,
-    FLAG_ACK = 0x1,
-    FLAG_REJ = 0x2,
-    FLAG_RR  = 0x4,
-    FLAG_EOS = 0x8
+    FLAG_NONE= 0x00,
+    FLAG_ACK = 0x01,
+    FLAG_REJ = 0x02,
+    FLAG_RR  = 0x04,
+    FLAG_QTY = 0x08,
+    FLAG_EOS = 0x10
 };
 // Acknowledge
 // Ready to Receive
@@ -25,6 +26,8 @@ bool flags_is_ACK(uint8_t rawflags);
 bool flags_is_REJ(uint8_t rawflags);
 
 bool flags_is_RR(uint8_t rawflags);
+
+bool flags_is_QTY(uint8_t rawflags);
 
 bool flags_is_EOS(uint8_t rawflags);
 #endif

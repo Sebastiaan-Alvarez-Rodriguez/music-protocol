@@ -2,19 +2,21 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+
 #include <stdio.h>
 #include <string.h>
 
-#include "receive.h"
 #include "communication/constants/constants.h"
 #include "communication/flags/flags.h"
+#include "server/client_info/client_info.h"
 #include "server/server/receive/receive.h"
 #include "server/server/receive/client_search.h"
+#include "receive.h"
 
 // Receives a message from the client and registers the client if it is
 // a new connection, otherwise points to the current connected client
 static bool receive_and_check(server_t* const server, com_t* receive, client_info_t** current) {
-    if (!com_receive(receive))
+    if (com_receive(receive) != RECV_OK)
         return false;
 
     client_info_t* client = NULL;
@@ -31,9 +33,7 @@ static bool receive_and_check(server_t* const server, com_t* receive, client_inf
         case NO_MATCH:
             puts("rejected, clients full");
             *current = NULL;
-            return false;
-        default:
-            errno = EINVAL;
+            free(receive->packet->data);
             return false;
     }
     *current = client;
@@ -45,8 +45,8 @@ static bool process_initial(const com_t* const receive, client_info_t* const cli
     puts("process_initial");
     bool retval = false;
     if(flags_is_ACK(receive->packet->flags)) {
-        client->current_q_level = *(uint8_t*) receive->packet->data;
-        client->packets_per_batch = constants_batch_packets_amount(client->current_q_level);
+        client->quality->current = *(uint8_t*) receive->packet->data;
+        client->packets_per_batch = constants_batch_packets_amount(client->quality->current);
         client->music_chuck_size = constants_packets_size();
         client->stage = INITIAL;
         task->type = SEND_ACK;
@@ -54,8 +54,7 @@ static bool process_initial(const com_t* const receive, client_info_t* const cli
         printf("Client packet size: %lu\n", client->music_chuck_size);
         printf("Client packets per batch: %lu\n", client->packets_per_batch);
         retval = true;
-    }
-    else if(flags_is_RR(receive->packet->flags)) {
+    } else if(flags_is_RR(receive->packet->flags)) {
         client->stage = INTERMEDIATE;
         task->type = SEND_BATCH;
         retval = true;
@@ -67,34 +66,41 @@ static bool process_initial(const com_t* const receive, client_info_t* const cli
 static void process_intermediate(server_t* const server, com_t* const receive, client_info_t* const client, task_t* const task) {
     if(!client->in_use) {
         task->type = SEND_EOS;
-    }
-    else if(flags_is_RR(receive->packet->flags)) {
+    } else if(flags_is_RR(receive->packet->flags)) {
         task->type = SEND_BATCH;
-        client->music_ptr += client->packets_per_batch * client->music_chuck_size;
-        client->packets_per_batch = constants_batch_packets_amount(client->current_q_level);
-        puts("RR\n");
-        printf("Bytes sent: %u\n", client->bytes_sent);
-        printf("Total Bytes: %u\n", server->mf->payload_size);
-        printf("Batch size: %lu\n", client->packets_per_batch * client->music_chuck_size);
+        client->packets_per_batch = constants_batch_packets_amount(client->quality->current);
+        //TODO: ANDREW kijk - hieronder weg ge comment
+        // client->music_ptr += client->packets_per_batch * client->music_chuck_size;
+        puts("RR");
+        // printf("Bytes sent: %u\n", client->bytes_sent);
+        // printf("Total Bytes: %u\n", server->mf->payload_size);
+        // printf("Batch size: %lu\n", client->packets_per_batch * client->music_chuck_size);
         if(client->bytes_sent + (client->packets_per_batch * client->music_chuck_size) >= server->mf->payload_size)
             client->stage = FINAL;
-    }
-    else if(flags_is_REJ(receive->packet->flags)) {
+    } else if(flags_is_REJ(receive->packet->flags)) {
         task->type = SEND_FAULTY;
-        task->arg = receive->packet->data;
+        task->arg_size = receive->packet->size;
+        task->arg = malloc(receive->packet->size);
+        memcpy(task->arg, receive->packet->data, task->arg_size);
+    } else if(flags_is_QTY(receive->packet->flags)) {
+        task->type = SEND_ACK;
+        client->quality->current = *(uint8_t*) receive->packet->data;
+        client->packets_per_batch = constants_batch_packets_amount(client->quality->current);
     }
 }
-
+    
 static void process_final(com_t* const receive, client_info_t* const client, task_t* const task) {
     if(!client->in_use || flags_is_RR(receive->packet->flags)) {
         task->type = SEND_EOS;
         client->in_use = false;
+        client_info_free(client);
         printf("Client in use: %s\n", client->in_use ? "TRUE" : "FALSE");
         puts("dd");
-    }
-    else if (flags_is_REJ(receive->packet->flags)) {
+    } else if (flags_is_REJ(receive->packet->flags)) {
         task->type = SEND_FAULTY;
-        task->arg = receive->packet->data;
+        task->arg_size = receive->packet->size;
+        task->arg = malloc(receive->packet->size);
+        memcpy(task->arg, receive->packet->data, task->arg_size);
     }
 }
 
@@ -119,6 +125,8 @@ bool receive_from_client(server_t* const server, com_t* receive, client_info_t**
             return false;
     }
     printf("Client in use: %s\n", client->in_use ? "TRUE" : "FALSE");
+    free(receive->packet->data);
+    packet_reset(receive->packet);
     *current = client;
     return true;
 }
