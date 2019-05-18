@@ -43,11 +43,11 @@ void send_RR(const client_t* const client) {
     com_free(&com);
 }
 
-void send_QTY(client_t* const client, uint8_t quality) {
+void send_QTY(client_t* const client) {
     com_t com;
     com_init(&com, client->fd, MSG_CONFIRM, client->sock, flags_get_raw(1, FLAG_QTY), 0);
 
-    com.packet->data = &quality;
+    com.packet->data = &(client->quality->current);
     com.packet->size = sizeof(uint8_t);
     
     com_send(&com);

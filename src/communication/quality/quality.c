@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <stdbool.h>
-
+#include <stdio.h>
 #include "communication/constants/constants.h"
 #include "quality.h"
 
@@ -30,4 +30,26 @@ inline bool quality_suggest_downsampling(const quality_t* const quality) {
 
 inline bool quality_suggest_compression(const quality_t* const quality) {
     return quality->current <= 2;
+}
+
+bool quality_adjust(quality_t* const quality) {
+    puts("Quality adjustment time");
+    printf("Current quality is %u\n", quality->current);
+    printf("Lost: %lu\nFaulty: %lu\nOK: %lu\n", quality->lost, quality->faulty, quality->ok);
+    if (quality->current < 5 && quality_should_increase(quality)) {
+        puts("Quality should increase");
+        quality->current += 1;
+        quality->lost = 0;
+        quality->faulty = 0;
+        quality->ok = 0;
+        return true;
+    } else if (quality->current > 1 && quality_should_decrease(quality)) {
+        puts("Quality should decrease");
+        quality->current -= 1;
+        quality->lost = 0;
+        quality->faulty = 0;
+        quality->ok = 0;
+        return true;
+    }
+    return false;
 }

@@ -32,6 +32,7 @@ void run(const char* address, const unsigned short port, const unsigned buffer_s
             player_play(client.player);
         
         receive_batch(&client);
+        client_adjust_quality(&client);
     }
     // Play the last buffered music
     while (!buffer_empty(client.player->buffer))

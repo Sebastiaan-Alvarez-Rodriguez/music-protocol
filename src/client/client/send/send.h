@@ -17,5 +17,6 @@ void send_REJ(const client_t* const client, const size_t len, const uint8_t* pac
 void send_RR(const client_t* const client);
 
 // Send QTY flag with new quality to server
-void send_QTY(client_t* const client, uint8_t quality);
+// The quality being sent is in client->quality->current
+void send_QTY(client_t* const client);
 #endif

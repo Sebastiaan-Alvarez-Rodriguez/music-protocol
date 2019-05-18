@@ -21,6 +21,5 @@ bool quality_suggest_downsampling(const quality_t* const quality);
 
 bool quality_suggest_compression(const quality_t* const quality);
 
-void quality_free(quality_t* const quality);
-
+bool quality_adjust(quality_t* const quality);
 #endif
