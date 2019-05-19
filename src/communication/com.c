@@ -11,6 +11,12 @@
 
 #include "com.h"
 
+#define SIMULATE
+#ifdef SIMULATE
+#include "communication/simulation/simulation.h"
+#define SIMULATE_BIT_FLIP_CHANCE 0.1f
+#define SIMULATE_DROP_PACKET_CHANCE 10.f
+#endif
 ///////////////////////////////////////////////////
 // Important - Read me
 //Raw buffer convention:
@@ -146,15 +152,6 @@ void com_init(com_t* const com, unsigned sockfd, int flags, struct sockaddr* con
     packet_init(com->packet, packet_flags, packetnr);
 }
 
-// void com_init_addr_cpy(com_t* const com, unsigned sockfd, int flags, struct sockaddr* const address, uint8_t packet_flags, uint8_t packetnr) {
-//     com->sockfd = sockfd;
-//     com->packet = malloc(sizeof(packet_t));
-//     com->flags = flags;
-//     memcpy(com->address, address, );
-//     com->addr_len = sizeof(struct sockaddr);
-//     packet_init(com->packet, packet_flags, packetnr);
-// }
-
 bool com_send(const com_t* const com) {
     void* buf = NULL;
     uint16_t size = 0;
@@ -163,17 +160,13 @@ bool com_send(const com_t* const com) {
         return false;
     }
 
-    // puts("-----SEND-----");
-    // printf("Size: %u\n", size);
-    // printf("Size data: %u\n", com->packet->size);
-    // printf("Size other: %u\n", size - com->packet->size);
-    // printf("flags: %#2x\n", com->packet->flags);
-    // printf("packet nr: %u\n", com->packet->nr);
-    // printf("Raw data:"); print_hex(size, buf);
-    // puts("--------------");
-
-    // if (com->flags == 0)
-    //     print_hex(com->packet->size, com->packet->data);
+    #ifdef SIMULATE
+    if (simulate_drop_packet(SIMULATE_DROP_PACKET_CHANCE)) {
+        free(buf);
+        return true;
+    }
+    simulate_flip_bits(buf, size, SIMULATE_BIT_FLIP_CHANCE);
+    #endif
 
     bool ret = sendto(com->sockfd, buf, size, com->flags, com->address, com->addr_len) >= 0;
     free(buf);
@@ -205,10 +198,8 @@ enum recv_flag com_receive(com_t* const com) {
     free(check_buf);
     //Checksum control for checksum 1
     uint16_t test_checksum1 = make_checksum1(size, flags, packetnr, checksum2);
-    if (checksum1 != test_checksum1) {
-        printf("Checksum1 mismatch! Expected %#8X, got %#8X\n", checksum1, test_checksum1);
+    if (checksum1 != test_checksum1)
         return RECV_FAULTY;
-    }
 
     //Get all received data
     void* full_data = malloc(sizeof(uint16_t)*4+size);
@@ -220,7 +211,7 @@ enum recv_flag com_receive(com_t* const com) {
     //Checksum control for checksum2
     uint16_t test_checksum2 = make_checksum2(buf_get_data(full_data), size);
     if (checksum2 != test_checksum2) {
-        printf("Checksum2 mismatch! Expected %#8X, got %#8X", checksum2, test_checksum2);
+        free(full_data);
         return RECV_FAULTY;
     }
 
@@ -243,6 +234,10 @@ bool com_receive_peek(const com_t* const com) {
     // TODO: Add timeout!
     // TODO: Check: Gaat alles goed als ik het zo doe?
     return recvfrom(com->sockfd, NULL, 0, MSG_PEEK, NULL, 0) < 0;
+}
+
+void com_consume_packet(const com_t* const com) {
+    recvfrom(com->sockfd, NULL, sizeof(uint16_t)*4+com->packet->size, com->flags, NULL, NULL);
 }
 
 void com_free(const com_t* const com) {

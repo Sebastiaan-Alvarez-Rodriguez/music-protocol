@@ -66,9 +66,13 @@ void server_run(server_t* const server) {
         client_info_t* current_client = NULL;
         com_init(&com, server->fd, MSG_WAITALL, (struct sockaddr*) &address, 0, 0);
 
-        receive_from_client(server, &com, &current_client, &task);
+        if (!receive_from_client(server, &com, &current_client, &task)) {
+            com_free(&com);
+            puts("Ignoring nonsense");
+            continue;
+        }
+
         send_to_client(server, &com, current_client, &task);
-        print_clients(server);
         if(task.type == SEND_FAULTY)
             free(task.arg);
         com_free(&com);

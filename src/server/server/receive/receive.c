@@ -13,31 +13,40 @@
 #include "server/server/receive/client_search.h"
 #include "receive.h"
 
+enum check_output_flag {
+    CHECK_OUTPUT_OK,
+    CHECK_OUTPUT_REJECT,
+    CHECK_OUTPUT_IGNORE
+};
+
 // Receives a message from the client and registers the client if it is
 // a new connection, otherwise points to the current connected client
-static bool receive_and_check(server_t* const server, com_t* receive, client_info_t** current) {
-    if (com_receive(receive) != RECV_OK)
-        return false;
+static enum check_output_flag receive_and_check(server_t* const server, com_t* receive, client_info_t** current) {
+    enum recv_flag flag = com_receive(receive);
+    if (flag != RECV_OK) {
+        if (flag == RECV_FAULTY) {
+            receive->packet->size = constants_packets_size();
+            com_consume_packet(receive);
+        }
+        return CHECK_OUTPUT_IGNORE;
+    }
 
     client_info_t* client = NULL;
 
     switch (search_client(server, receive->address, &client)) {
         case MATCH:
-            puts("welcome back");
             break;
         case MATCH_UNUSED:
-            puts("new user");
             client_info_init(client, receive, server->mf->samples);
             print_clients(server);
             break;
         case NO_MATCH:
-            puts("rejected, clients full");
             *current = NULL;
             free(receive->packet->data);
-            return false;
+            return CHECK_OUTPUT_REJECT;
     }
     *current = client;
-    return true;
+    return CHECK_OUTPUT_OK;
 }
 
 // Processes an initial request from the client
@@ -94,8 +103,6 @@ static void process_final(com_t* const receive, client_info_t* const client, tas
         task->type = SEND_EOS;
         client->in_use = false;
         client_info_free(client);
-        printf("Client in use: %s\n", client->in_use ? "TRUE" : "FALSE");
-        puts("dd");
     } else if (flags_is_REJ(receive->packet->flags)) {
         task->type = SEND_FAULTY;
         task->arg_size = receive->packet->size;
@@ -106,14 +113,17 @@ static void process_final(com_t* const receive, client_info_t* const client, tas
 
 bool receive_from_client(server_t* const server, com_t* receive, client_info_t** current, task_t* const task) {
     client_info_t* client = NULL;
-    if(!receive_and_check(server, receive, &client)) {
-        task->type = SEND_EOS;
+    enum check_output_flag flag = receive_and_check(server, receive, &client);
+    if(flag == CHECK_OUTPUT_IGNORE) {
         return false;
+    } else if (flag == CHECK_OUTPUT_REJECT) {
+        task->type = SEND_EOS;
+        return true;
     }
     switch (client->stage) {
         case INITIAL:
             if(!process_initial(receive, client, task))
-                return false;
+                return true;
             break;
         case INTERMEDIATE:
             process_intermediate(server, receive, client, task);
@@ -124,7 +134,6 @@ bool receive_from_client(server_t* const server, com_t* receive, client_info_t**
         default:
             return false;
     }
-    printf("Client in use: %s\n", client->in_use ? "TRUE" : "FALSE");
     free(receive->packet->data);
     packet_reset(receive->packet);
     *current = client;

@@ -25,7 +25,6 @@ static void prepare_final(server_t* const server, com_t* const send, client_info
     size_t bytes_to_send = client->music_chuck_size;
     if(client->bytes_sent + client->music_chuck_size > server->mf->payload_size)
         bytes_to_send = server->mf->payload_size - client->bytes_sent;
-    printf("Nr [%u], sending bytes: %lu\n", packet_nr, bytes_to_send);
     prepare_music_packet(send, client, bytes_to_send, packet_nr);
 }
 
@@ -95,7 +94,6 @@ static bool send_faulty(server_t* const server, com_t* const send, client_info_t
 }
 
 bool send_to_client(server_t* const server, com_t* const com, client_info_t* const current, const task_t* const task) {
-    printf("TASK: %u\n", task->type);
     bool retval = false;
     switch (task->type) {
         case SEND_ACK:

@@ -100,6 +100,8 @@ void client_fill_initial_buffer(client_t* const client) {
 void client_adjust_quality(client_t* const client) {
     if (quality_adjust(client->quality)) {
         do {
+            if (receive_EOS(client, false))
+                return;
             puts("Sending QTY update!");
             send_QTY(client);
         } while (receive_ACK(client, true) != RECV_OK);
