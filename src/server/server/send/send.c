@@ -118,10 +118,11 @@ bool send_to_client(server_t* const server, com_t* const com, client_info_t* con
     bool retval = false;
     switch (task->type) {
         case SEND_ACK:
+            puts("ACK");
             retval &= send_flags(com, FLAG_ACK);
             break;
         case SEND_EOS:
-            puts("SEND EOS");
+            puts("EOS");
             retval &= send_flags(com, FLAG_EOS);
             break;
         case SEND_BATCH:

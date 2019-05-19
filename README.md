@@ -2,9 +2,40 @@
 This is assignment 2 of
  * Andrew Huang (s1913999)
  * Sebastiaan Alvarez Rodriguez (s1810979)
-
+In this file we explain conventions, design choices and experiments.
+TODO: doe experiments
 # Convention
 In this section we explain our convention in detail.
+
+## Convention visualization
+Here below you can see what a packet looks like when sent/received, and you can find what every field means.
+```
+ 0      7 8     15 16    23 24    31
++--------+--------+--------+--------+
+|    checksum1    |       size      |
++--------+--------+--------+--------+
+| flags  |   nr   |    checksum2    |
++-----------------+-----------------+
+|   data octets ...
++---------------- ...
+```
+Please see the explanation of every field below:
+ * Checksum1: This is a 16-bit checksum for fields size, flags, nr, and checksum2
+ * Size:      The size of the data buffer
+ * Flags:     This is a 8-bit field, containing bitflags. See further below for possible flags and their meaning
+ * Nr:        The packet number, to make sure out-of-order packets can be detected
+ * Checksum2: This is a 16-bit checksum for the data-field
+ * Data:      Here, all data is stored
+
+## Flags
+Flag | Bit    | Special arg | Meaning
+---- | ------ | ----------- | -------------
+None | `0x00` | No args     | No flag
+ACK  | `0x01` | Buffersize  | Ready to receive batch 1
+REJ  | `0x02` | Packetnr    | Reject specified packetnr
+RR   | `0x04` | Batchnr     | Ready to receive next batch
+QTY  | `0x08` | New quality | New quality
+EOS  | `0x10` | No args     | End of stream
 
 ## Communication process
 We have a server `S` and a client `C`.
@@ -41,7 +72,8 @@ After this, `C` will send an RR to receive the next batch. `S` receives the RR f
 > If `C` does not receive the EOS (correctly) in any way, then `C` sends `S` a `REJ`. `S` no longer knows `C`, and performs initial communication protocols. `C` does not open with `ACK`, thus `C` is sent another EOS.
 
 ### Quality changes
-`C` determines the quality, by reviewing amount of dropped/faulty packets versus amount of healthy packets. When quality should be adjusted, `C` sends QTY flag, with in the data section one uint8_t containing new quality. `S` receives and registers new quality parameter. `S` sends an ACK to acknowledge receival. The following may happen:
+`C` determines the quality, by reviewing amount of dropped/faulty packets versus amount of healthy packets. When quality should be adjusted, `C` sends QTY flag, with in the data section one uint8_t containing new quality. `S` receives and registers new quality parameter. `S` sends an ACK to acknowledge receival. There are precise limits when a QTY flag may be sent: Never while batches are being sent. Never when a batch had missing/faulty packets and REJ should be sent. Only between two successfully retrieved batches.  
+The following may happen:
  1. Everything okay: quality adjustment successful.
  2. QTY communication (from `C` to `S`) failure: `C` receives no ACK, times out, and restarts QTY communication
  3. ACK from `S` to `C` faulty/dropped: `C` receives no ACK, times out, and restarts QTY communication.
@@ -54,32 +86,43 @@ Quality is given with 1,2,3,4,5. The higher the number, the higher the quality. 
  4. Batches are 50KB, consisting of 200 packets.
  5. Batches are 63.75KB, consisting of 255 packets.  
 
-## Convention visualization
-Here below you can see what a packet looks like when sent/received, and you can find what every field means.
-```
- 0      7 8     15 16    23 24    31
-+--------+--------+--------+--------+
-|    checksum1    |       size      |
-+--------+--------+--------+--------+
-| flags  |   nr   |    checksum2    |
-+-----------------+-----------------+
-|   data octets ...
-+---------------- ...
-```
-Please see the explanation of every field below:
- * Checksum1: This is a 16-bit checksum for fields size, flags, nr, and checksum2
- * Size:      The size of the data buffer
- * Flags:     This is a 8-bit field, containing bitflags. See further below for possible flags and their meaning
- * Nr:        The packet number, to make sure out-of-order packets can be detected
- * Checksum2: This is a 16-bit checksum for the data-field
- * Data:      Here, all data is stored
+# Design choices
+Here, we will explain our most important design choices.
 
-## Flags
-Flag | Bit    | Special arg | Meaning
----- | ------ | ----------- | -------------
-None | `0x00` | No args     | No flag
-ACK  | `0x01` | Buffersize  | Ready to receive batch 1
-REJ  | `0x02` | Packetnr    | Reject specified packetnr
-RR   | `0x04` | Batchnr     | Ready to receive next batch
-QTY  | `0x08` | New quality | New quality
-EOS  | `0x10` | No args     | End of stream
+## Burst protocol: Safety of checking one by one, but fast
+For our protocol, we wanted to implement something fast and safe, which uses network cables as little as possible, such that other connected machines to the same wire could use it without hindrance. For this purpose, we decided that the optimal solution would be in a protocol 'bursting' packets. The protocol follows the following pattern:
+ 1. initial communication
+ 2. `C` requests batch `a`.
+ 3. `S` sends batch `a`, containing `x` packets, with `x` depending on quality.
+ 4. `C` verifies batch, possibly requesting resend for missing/faulty packets (also in a batch). A REJ is sent in case there exist missing/faulty packets, which is blocking. 
+ 5. `C` checks if quality level is okay, possibly telling server to change quality.
+ 6. Go back to 2, except for when an EOS has been received.  
+In the subsections below, we will go in further detail about this.
+
+## Batches and qualities
+When creating this protocol, we figured: If a connection is unreliable, we should perform more checks per time unit, to allow for a higher throughput of correct packets. Connections may change from reliable to unreliable very quickly. Thus, we decided that quality should decrease fast when connection reliability decreases, but should increase slowly when connection seems to be reliable enough. TODO: Plaats hier percentages
+For a lower quality, we send fewer packets per burst, or 'batch'. For a higher quality, we send more. For this, see section 'Quality implications' above.
+
+## Batches and buffers
+The only drawback of this 'burst' protocol approach is: a batch must fit in the client's buffer. This tends to become a problem when a very small buffer size is chosen. Therefore, we set a minimum buffer size of 2 times the highest possible batch size. This comes down to 2 times 63.75KB = 127.5KB, about 128KB, as can be seen in 'Quality implications'.  
+We decided to multiply the highest possible batch size by 2 as minimum, such that no underruns can happen by default.  
+If there is a maximum quality stream (63.75KB batches) and we would use a 63.75KB buffer, we must wait with requesting next batch until there is enough space (63.75 KB free) in the buffer. In other words: we could only request a batch, when our buffer is empty. An empty buffer means there is no more music to play, and ALSA lib would experience buffer underruns and music would stop.
+
+## Who gets to do what
+All different tasks may be spread between client and server in many ways. In our approach, we made these kinds of design decisions with multi-client support in mind.
+
+### Client
+The client is responsible for:
+ - All error detections and solutions
+ - Reording packets in case of misordered receival
+ - adjusting quality in case of need
+The meaning of this is: Client must measure connection reliability.
+
+### Server
+The server is responsible for:
+ - Keeping track of all different clients
+ - Keeping track of what music data the current client should retrieve
+This means: In case of any missing/faulty packets from client to server, the server just ignores the request and lets client timeout.
+
+## Timeouts
+Since our protocol is based on client side error handling and we let client timeout if communication from client to server fails, we had to set a low timeout, as to not waste too much time until client finally moves on and fixes errors. Timeout is currently set to 16 milliseconds.

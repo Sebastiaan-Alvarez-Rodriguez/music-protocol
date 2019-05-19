@@ -43,7 +43,7 @@ void run(const char* address, const unsigned short port, const unsigned buffer_s
 
 int main(int argc, char **argv) {
     const char* const prog_name = argv[0];
-    size_t buffer_size = constants_batch_size(5);
+    size_t buffer_size = constants_batch_size(5)*2;
     uint8_t initial_quality = 3;
     char* server_address = "127.0.0.1";
     unsigned short bind_port = 1235;
