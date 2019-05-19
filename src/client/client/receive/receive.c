@@ -54,12 +54,10 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
         enum recv_flag flag = com_receive(&com);
         if (flag == RECV_TIMEOUT) {
             client->quality->lost += (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved) - i;
-            free(com.packet->data);
             com_free(&com);
             break;
         } else if (flag == RECV_FAULTY) {
             client->quality->faulty += 1;
-            free(com.packet->data);
             com_free(&com);
             continue;
         }
@@ -68,16 +66,21 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
             com_free(&com);
             continue;
         }
-        
-        if (quality_suggest_compression(client->quality))
+
+        if (quality_suggest_compression(client->quality)) {
+            void* current_data = com.packet->data;
             decompress(&com);
+            free(current_data);
+        }
         if (quality_suggest_downsampling(client->quality)) {
             if (quality_suggest_compression(client->quality)) {
                 void* current_data = com.packet->data;
                 resample(&com, 8);
                 free(current_data);
             } else {
+                void* current_data = com.packet->data;
                 resample(&com, 8);
+                free(current_data);
             }
         }
 
@@ -97,8 +100,8 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
 
 static inline bool raw_batch_integrity_ok(const client_t* const client, raw_batch_t* raw) {
     if (raw->size_nrs != constants_batch_packets_amount(client->quality->current)) {
-        printf("I miss packets! QTY: %u. Expected: %lu. Got: %u.\n", 
-            client->quality->current, 
+        printf("I miss packets! QTY: %u. Expected: %lu. Got: %u.\n",
+            client->quality->current,
             constants_batch_packets_amount(client->quality->current),
             raw->size_nrs);
         uint8_t* missing = raw_batch_get_missing_nrs(raw,constants_batch_packets_amount(client->quality->current));

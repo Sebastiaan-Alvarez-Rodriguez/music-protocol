@@ -41,10 +41,6 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
         switch(current->stage) {
             case INTERMEDIATE:
                 prepare_intermediate(send, current, i);
-                if (quality_suggest_downsampling(current->quality))
-                    downsample(send, 8);
-                if (quality_suggest_compression(current->quality))
-                    compress(send);
                 break;
             case FINAL:
                 prepare_final(server, send, current, i);
@@ -53,10 +49,15 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
                 errno = EINVAL;
                 return false;
         }
+        if (quality_suggest_downsampling(current->quality))
+            downsample(send, 8);
+        if (quality_suggest_compression(current->quality))
+            compress(send);
+
         retval &= com_send(send);
-        if (current->stage == INTERMEDIATE && (
-            quality_suggest_downsampling(current->quality)
-            || quality_suggest_compression(current->quality)))
+
+        if (quality_suggest_downsampling(current->quality)
+            || quality_suggest_compression(current->quality))
             free(send->packet->data);
     }
     current->music_ptr += current->packets_per_batch * current->music_chuck_size;
