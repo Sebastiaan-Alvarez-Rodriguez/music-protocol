@@ -15,13 +15,14 @@
 #define SIMULATE
 #ifdef SIMULATE
     #include "communication/simulation/simulation.h"
+    #define SIMULATE_BIT_SOME_FLIP_CHANCE 0.1f
     #define SIMULATE_BIT_FLIP_CHANCE 1.1f
-    #define SIMULATE_BIT_SOME_FLIP_CHANCE 1.1f
     #define SIMULATE_DROP_PACKET_CHANCE 1.1f
     #define SIMULATE_RANDOM_WAIT_CHANCE 1.5f
     #ifdef SIMULATE_RANDOM_WAIT_CHANCE
-        #define SIMULATE_RANDOM_WAIT_MIN 10
-        #define SIMULATE_RANDOM_WAIT_MAX 1000
+        // Times below represent ms, must be integer
+        #define SIMULATE_RANDOM_WAIT_MIN 1
+        #define SIMULATE_RANDOM_WAIT_MAX 10
     #endif
 #endif
 ///////////////////////////////////////////////////
@@ -181,7 +182,7 @@ bool com_send(const com_t* const com) {
             simulate_flip_bits(buf, size, SIMULATE_BIT_FLIP_CHANCE);
         if (simulate_random_chance(SIMULATE_RANDOM_WAIT_CHANCE)) {
             size_t amt = simulate_random_wait_amt(SIMULATE_RANDOM_WAIT_MIN, SIMULATE_RANDOM_WAIT_MAX);
-            printf("SLEEPING for %lu ns\n", amt);
+            printf("SLEEPING for %lu ms\n", amt);
             usleep(amt);
         }
     }
