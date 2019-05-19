@@ -78,12 +78,30 @@ static bool send_faulty(server_t* const server, com_t* const send, client_info_t
                 prepare_intermediate(send, current, *faulty_ptr);
                 if (quality_suggest_downsampling(current->quality))
                     downsample(send, 8);
-                if (quality_suggest_compression(current->quality))
-                    compress(send);
+                if (quality_suggest_compression(current->quality)) {
+                    if (quality_suggest_downsampling(current->quality)) {
+                        void* current_data = send->packet->data;
+                        compress(send);
+                        free(current_data);
+                    } else {
+                        compress(send);
+                    }
+                }
                 current->music_ptr += current->packets_per_batch * current->music_chuck_size;
                 break;
             case FINAL:
                 prepare_final(server, send, current, *faulty_ptr);
+                if (quality_suggest_downsampling(current->quality))
+                    downsample(send, 8);
+                if (quality_suggest_compression(current->quality)) {
+                    if (quality_suggest_downsampling(current->quality)) {
+                        void* current_data = send->packet->data;
+                        compress(send);
+                        free(current_data);
+                    } else {
+                        compress(send);
+                    }
+                }
                 break;
             default:
                 errno = EINVAL;

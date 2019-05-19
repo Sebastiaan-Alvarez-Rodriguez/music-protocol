@@ -27,7 +27,6 @@ static inline uint8_t* raw_batch_get_missing_nrs(raw_batch_t* raw, uint8_t expec
     uint8_t* not_containing_ptr = not_containing;
     for (uint8_t i = 0; i < expected; ++i)
         if (!contains(raw, i)) {
-            printf("initialized? EXPECT %u. Check %u not contained\n", expected, i);
             *not_containing_ptr = i;
             ++not_containing_ptr;
         }
@@ -72,8 +71,15 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
         
         if (quality_suggest_compression(client->quality))
             decompress(&com);
-        if (quality_suggest_downsampling(client->quality))
-            resample(&com, 8);
+        if (quality_suggest_downsampling(client->quality)) {
+            if (quality_suggest_compression(client->quality)) {
+                void* current_data = com.packet->data;
+                resample(&com, 8);
+                free(current_data);
+            } else {
+                resample(&com, 8);
+            }
+        }
 
         if (com.packet->nr >= constants_batch_packets_amount(client->quality->current)) {
             printf("WEIRDNESS: Received packet nr %u, which is larger than %lu\n", com.packet->nr, constants_batch_packets_amount(client->quality->current));

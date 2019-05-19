@@ -11,7 +11,7 @@
 
 #include "com.h"
 
-#define SIMULATE
+// #define SIMULATE
 #ifdef SIMULATE
 #include "communication/simulation/simulation.h"
 #define SIMULATE_BIT_FLIP_CHANCE 0.1f

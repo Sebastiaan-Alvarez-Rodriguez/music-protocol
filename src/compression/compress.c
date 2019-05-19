@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 #include "communication/com.h"
 #include "compress.h"
 
@@ -57,6 +58,17 @@ static void unpack_128bit(const void* const data, void* const new_data) {
     *new_ptr = *data_ptr << 2;
 }
 
+//Print all bits for given size in buffer. assumes little endian
+__attribute__ ((unused)) static void print_hex(const size_t size, const void* const ptr) {
+    uint8_t* hexptr = (uint8_t*) ptr;
+
+    for (int i=size-1;i>=0;i--) {
+            uint8_t byte = hexptr[i];
+            printf("%X", byte);
+        }
+    puts("");
+}
+
 //224/16=014
 //014*14=196
 void compress(com_t* const com) {
@@ -102,44 +114,42 @@ void downsample(com_t* const com, const size_t n) {
     const uint16_t newsize = (com->packet->size / n) * (n-1);
     void* compressed = malloc(newsize);
     bzero(compressed, newsize);
-    uint8_t* compressed_ptr = compressed;
-    uint8_t* data_ptr = com->packet->data;
+    uint32_t* compressed_ptr = compressed;
+    uint32_t* data_ptr = com->packet->data;
 
     size_t frames = com->packet->size / frame_length;
     for (size_t i = 0; i < frames; ++i) {
-        if (i % (n-1) == 0) {
-            data_ptr += frame_length;
+        if (i % n == 0) {
+            ++data_ptr;
             continue;
         }
-        memcpy(compressed_ptr, data_ptr, frame_length);
-        compressed_ptr += frame_length;
-        data_ptr += frame_length;
+        memcpy(compressed_ptr, data_ptr, sizeof(uint32_t));
+        ++compressed_ptr;
+        ++data_ptr;
     }
     com->packet->size = newsize;
     com->packet->data = compressed;
 }
 
-// 224/7*8=32
 void resample(com_t* const com, const size_t n) {
     const uint8_t frame_length = 4;
-    const uint16_t newsize = (com->packet->size / (n-1)) * n;//224/7*8=32*8=256
+    const uint16_t newsize = (com->packet->size / (n-1)) * n;
     void* decompressed = malloc(newsize);
     bzero(decompressed, newsize);
-    uint8_t* decompressed_ptr = decompressed;
-    uint8_t* data_ptr = com->packet->data;
-
+    uint32_t* decompressed_ptr = decompressed;
+    uint32_t* data_ptr = com->packet->data;
+    // B C D E F G H J K L M N O P
+    // 0 B C D E F G H 0 J K L M N O P
     size_t frames = newsize / frame_length;
     for (size_t i = 0; i < frames; ++i) {
-        if (i % (n-1) == 0) {
-            decompressed_ptr += frame_length;
+        if (i % n == 0) {
+            decompressed_ptr+=1;
             continue;
         }
-        memcpy(decompressed_ptr, data_ptr, frame_length);
-        decompressed_ptr += frame_length;
-        data_ptr += frame_length;
+        memcpy(decompressed_ptr, data_ptr, sizeof(uint32_t));
+        ++decompressed_ptr;
+        ++data_ptr;
     }
     com->packet->size = newsize;
     com->packet->data = decompressed;
-    if (newsize > 256)
-        printf("RESAMPLE CAUSES >255: %u\n", newsize);
 }
