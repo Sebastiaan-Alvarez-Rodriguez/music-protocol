@@ -208,7 +208,7 @@ enum recv_flag com_receive(com_t* const com) {
         }
         return RECV_ERROR;
     }
-    
+
     uint16_t checksum1 = buf_get_checksum1(check_buf);
     uint16_t size = buf_get_size(check_buf);
     uint8_t flags = buf_get_flags(check_buf);
@@ -224,8 +224,10 @@ enum recv_flag com_receive(com_t* const com) {
     void* full_data = malloc(sizeof(uint16_t)*4+size);
     if (full_data == NULL || errno == ENOMEM)
         return RECV_ERROR;
-    if(recvfrom(com->sockfd, full_data, sizeof(uint16_t)*4+size, com->flags, com->address, &com->addr_len) < 0)
+    if(recvfrom(com->sockfd, full_data, sizeof(uint16_t)*4+size, com->flags, com->address, &com->addr_len) < 0) {
+        free(full_data);
         return RECV_ERROR;
+    }
 
     //Checksum control for checksum2
     uint16_t test_checksum2 = make_checksum2(buf_get_data(full_data), size);
