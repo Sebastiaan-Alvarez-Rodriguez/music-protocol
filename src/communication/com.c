@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 
@@ -11,11 +12,17 @@
 
 #include "com.h"
 
-// #define SIMULATE
+#define SIMULATE
 #ifdef SIMULATE
-#include "communication/simulation/simulation.h"
-#define SIMULATE_BIT_FLIP_CHANCE 0.1f
-#define SIMULATE_DROP_PACKET_CHANCE 1.5f
+    #include "communication/simulation/simulation.h"
+    #define SIMULATE_BIT_FLIP_CHANCE 1.1f
+    #define SIMULATE_BIT_SOME_FLIP_CHANCE 1.1f
+    #define SIMULATE_DROP_PACKET_CHANCE 1.1f
+    #define SIMULATE_RANDOM_WAIT_CHANCE 1.5f
+    #ifdef SIMULATE_RANDOM_WAIT_CHANCE
+        #define SIMULATE_RANDOM_WAIT_MIN 10
+        #define SIMULATE_RANDOM_WAIT_MAX 1000
+    #endif
 #endif
 ///////////////////////////////////////////////////
 // Important - Read me
@@ -161,15 +168,23 @@ bool com_send(const com_t* const com) {
     }
 
     #ifdef SIMULATE
-    if (com->packet->flags != 1 && simulate_drop_packet(SIMULATE_DROP_PACKET_CHANCE)) {
-        if (com->packet->flags != 0)
-            printf("DROPPING A PACKET with flags: %x\n", com->packet->flags);
-        else
-            puts("DROPPING A PACKET");
-        free(buf);
-        return true;
+    if (com->packet->flags != 0x1) {
+        if (simulate_random_chance(SIMULATE_DROP_PACKET_CHANCE)) {
+            if (com->packet->flags != 0)
+                printf("DROPPING A PACKET with flags: %x\n", com->packet->flags);
+            else
+                puts("DROPPING A PACKET");
+            free(buf);
+            return true;
+        }
+        if (simulate_random_chance(SIMULATE_BIT_SOME_FLIP_CHANCE))
+            simulate_flip_bits(buf, size, SIMULATE_BIT_FLIP_CHANCE);
+        if (simulate_random_chance(SIMULATE_RANDOM_WAIT_CHANCE)) {
+            size_t amt = simulate_random_wait_amt(SIMULATE_RANDOM_WAIT_MIN, SIMULATE_RANDOM_WAIT_MAX);
+            printf("SLEEPING for %lu ns\n", amt);
+            usleep(amt);
+        }
     }
-    simulate_flip_bits(buf, size, SIMULATE_BIT_FLIP_CHANCE);
     #endif
 
     bool ret = sendto(com->sockfd, buf, size, com->flags, com->address, com->addr_len) >= 0;

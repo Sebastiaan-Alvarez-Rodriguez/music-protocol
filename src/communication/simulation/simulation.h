@@ -8,5 +8,7 @@ void simulate_swap_packets(unsigned* const packet_nrs, const size_t batch_len, c
 
 void simulate_flip_bits(void* const data, const uint16_t size, const float probability);
 
-bool simulate_drop_packet(const float probability);
+size_t simulate_random_wait_amt(const unsigned min, const unsigned max);
+
+bool simulate_random_chance(const float probability);
 #endif
