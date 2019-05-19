@@ -10,6 +10,10 @@
 // Remember, make sure n > 1
 void downsample(com_t* const com, const size_t n);
 
+// Resample by placing zeroes at thrown away frame locations
+// Remember, make sure n > 1
+void resample(com_t* const com, const size_t n);
+
 // Compress data inside a com
 // Compression is done by throwing away the least significant 2 bits
 // from every 16 bits, filling up with most significant 2 from next 16 bits

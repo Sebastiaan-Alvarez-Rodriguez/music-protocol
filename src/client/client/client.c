@@ -32,7 +32,7 @@ static void connect_server(client_t* const client, const char* address, const un
         }
         struct timeval tv;
         tv.tv_sec = 0;
-        tv.tv_usec = 100000; //100.000 us = 100 ms
+        tv.tv_usec = 16000; //16.000 us = 16 ms
         if (setsockopt(socket_fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
             perror("Error");
         }
@@ -102,7 +102,7 @@ void client_adjust_quality(client_t* const client) {
         do {
             if (receive_EOS(client, false))
                 return;
-            puts("Sending QTY update!");
+            printf("Sending QTY update! To %u\n", client->quality->current);
             send_QTY(client);
         } while (receive_ACK(client, true) != RECV_OK);
     }

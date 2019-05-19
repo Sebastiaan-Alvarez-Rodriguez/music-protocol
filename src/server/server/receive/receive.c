@@ -67,6 +67,10 @@ static bool process_initial(const com_t* const receive, client_info_t* const cli
         client->stage = INTERMEDIATE;
         task->type = SEND_BATCH;
         retval = true;
+    } else if(flags_is_REJ(receive->packet->flags)) {
+        client->stage = INTERMEDIATE;
+        task->type = SEND_FAULTY;
+        retval = true;
     }
     return retval;
 }
@@ -78,15 +82,11 @@ static void process_intermediate(server_t* const server, com_t* const receive, c
     } else if(flags_is_RR(receive->packet->flags)) {
         task->type = SEND_BATCH;
         client->packets_per_batch = constants_batch_packets_amount(client->quality->current);
-        //TODO: ANDREW kijk - hieronder weg ge comment
-        // client->music_ptr += client->packets_per_batch * client->music_chuck_size;
         puts("RR");
-        // printf("Bytes sent: %u\n", client->bytes_sent);
-        // printf("Total Bytes: %u\n", server->mf->payload_size);
-        // printf("Batch size: %lu\n", client->packets_per_batch * client->music_chuck_size);
         if(client->bytes_sent + (client->packets_per_batch * client->music_chuck_size) >= server->mf->payload_size)
             client->stage = FINAL;
     } else if(flags_is_REJ(receive->packet->flags)) {
+        puts("REJ");
         task->type = SEND_FAULTY;
         task->arg_size = receive->packet->size;
         task->arg = malloc(receive->packet->size);

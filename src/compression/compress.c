@@ -57,9 +57,13 @@ static void unpack_128bit(const void* const data, void* const new_data) {
     *new_ptr = *data_ptr << 2;
 }
 
+//224/16=014
+//014*14=196
 void compress(com_t* const com) {
     uint16_t pairs_128_bits = com->packet->size / 16;//256/16=16
-    void* new_data = malloc(pairs_128_bits*14);//16*14=224
+    uint16_t newsize = pairs_128_bits*14;
+    void* new_data = malloc(newsize);//16*14=224
+    bzero(new_data, newsize);
     uint16_t* data_ptr = com->packet->data;
     uint16_t* new_ptr = new_data;
     for (unsigned i = 0; i < pairs_128_bits; ++i) {
@@ -68,13 +72,18 @@ void compress(com_t* const com) {
         new_ptr+=7; //move 112 bits (last 16 not needed because compression)
     }
     com->packet->data = new_data;
-    com->packet->size = pairs_128_bits*14;
+    com->packet->size = newsize;
+    if (newsize > 256)
+        printf("COMPRESS CAUSES >255: %u\n", newsize);
 }
 
+//196/14=14
+//14*16=224
 void decompress(com_t* const com) {
-    uint16_t pairs_112_bits = com->packet->size / 14;//224/14=16
-    void* new_data = malloc(pairs_112_bits*16);//16*16=256
-
+    uint16_t pairs_112_bits = com->packet->size / 14;
+    uint16_t newsize = pairs_112_bits*16;
+    void* new_data = malloc(newsize);
+    bzero(new_data, newsize);
     uint16_t* data_ptr = com->packet->data;
     uint16_t* new_ptr = new_data;
     for (unsigned i = 0; i < pairs_112_bits; ++i) {
@@ -83,26 +92,54 @@ void decompress(com_t* const com) {
         new_ptr+=8;  //move 128 bits
     }
     com->packet->data = new_data;
-    com->packet->size = pairs_112_bits*16;
+    com->packet->size = newsize;
+    if (newsize > 256)
+        printf("DECOMPRESS CAUSES >255: %u\n", newsize);
 }
 
 void downsample(com_t* const com, const size_t n) {
-    const uint8_t frame_length = 16*2;
+    const uint8_t frame_length = 4;
     const uint16_t newsize = (com->packet->size / n) * (n-1);
     void* compressed = malloc(newsize);
+    bzero(compressed, newsize);
     uint8_t* compressed_ptr = compressed;
     uint8_t* data_ptr = com->packet->data;
-    size_t count2 = 0;
 
     size_t frames = com->packet->size / frame_length;
     for (size_t i = 0; i < frames; ++i) {
-        if (i % n == 0)
+        if (i % (n-1) == 0) {
+            data_ptr += frame_length;
             continue;
+        }
         memcpy(compressed_ptr, data_ptr, frame_length);
         compressed_ptr += frame_length;
         data_ptr += frame_length;
-        count2 += frame_length;
     }
     com->packet->size = newsize;
     com->packet->data = compressed;
+}
+
+// 224/7*8=32
+void resample(com_t* const com, const size_t n) {
+    const uint8_t frame_length = 4;
+    const uint16_t newsize = (com->packet->size / (n-1)) * n;//224/7*8=32*8=256
+    void* decompressed = malloc(newsize);
+    bzero(decompressed, newsize);
+    uint8_t* decompressed_ptr = decompressed;
+    uint8_t* data_ptr = com->packet->data;
+
+    size_t frames = newsize / frame_length;
+    for (size_t i = 0; i < frames; ++i) {
+        if (i % (n-1) == 0) {
+            decompressed_ptr += frame_length;
+            continue;
+        }
+        memcpy(decompressed_ptr, data_ptr, frame_length);
+        decompressed_ptr += frame_length;
+        data_ptr += frame_length;
+    }
+    com->packet->size = newsize;
+    com->packet->data = decompressed;
+    if (newsize > 256)
+        printf("RESAMPLE CAUSES >255: %u\n", newsize);
 }

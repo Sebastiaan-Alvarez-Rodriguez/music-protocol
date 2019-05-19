@@ -15,7 +15,7 @@
 #ifdef SIMULATE
 #include "communication/simulation/simulation.h"
 #define SIMULATE_BIT_FLIP_CHANCE 0.1f
-#define SIMULATE_DROP_PACKET_CHANCE 10.f
+#define SIMULATE_DROP_PACKET_CHANCE 1.5f
 #endif
 ///////////////////////////////////////////////////
 // Important - Read me
@@ -161,7 +161,11 @@ bool com_send(const com_t* const com) {
     }
 
     #ifdef SIMULATE
-    if (simulate_drop_packet(SIMULATE_DROP_PACKET_CHANCE)) {
+    if (com->packet->flags != 1 && simulate_drop_packet(SIMULATE_DROP_PACKET_CHANCE)) {
+        if (com->packet->flags != 0)
+            printf("DROPPING A PACKET with flags: %x\n", com->packet->flags);
+        else
+            puts("DROPPING A PACKET");
         free(buf);
         return true;
     }

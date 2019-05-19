@@ -19,7 +19,7 @@ typedef struct {
 } raw_batch_t;
 
 static inline bool contains(raw_batch_t* raw, uint8_t item) {
-    return raw->recv_nrs[item];
+    return (raw->recv_nrs)[item];
 }
 
 static inline uint8_t* raw_batch_get_missing_nrs(raw_batch_t* raw, uint8_t expected) {
@@ -27,7 +27,7 @@ static inline uint8_t* raw_batch_get_missing_nrs(raw_batch_t* raw, uint8_t expec
     uint8_t* not_containing_ptr = not_containing;
     for (uint8_t i = 0; i < expected; ++i)
         if (!contains(raw, i)) {
-            // printf("Found missing: %u.\n", i);
+            printf("initialized? EXPECT %u. Check %u not contained\n", expected, i);
             *not_containing_ptr = i;
             ++not_containing_ptr;
         }
@@ -37,6 +37,7 @@ static inline uint8_t* raw_batch_get_missing_nrs(raw_batch_t* raw, uint8_t expec
 static void raw_batch_init(raw_batch_t* raw, size_t expected_packet_amt) {
     raw->data_ptr = malloc(expected_packet_amt * constants_packets_size());
     raw->recv_nrs = malloc(sizeof(bool)*expected_packet_amt);
+    bzero(raw->data_ptr, expected_packet_amt * constants_packets_size());
     bzero(raw->recv_nrs, sizeof(bool)*expected_packet_amt);
     raw->size_nrs = 0;
 }
@@ -54,31 +55,33 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
         enum recv_flag flag = com_receive(&com);
         if (flag == RECV_TIMEOUT) {
             client->quality->lost += (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved) - i;
-            printf("OHNO, I lost %lu packets!", (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved) - i);
+            free(com.packet->data);
+            com_free(&com);
             break;
         } else if (flag == RECV_FAULTY) {
             client->quality->faulty += 1;
-            puts("OHNO, I got faulty packet");
+            free(com.packet->data);
+            com_free(&com);
             continue;
         }
-        // if (com.packet->nr == 42 && i != 0)
-        //     continue;
-        // else if (com.packet->nr == 42 && i == 0) {
-        //     printf("receiving packet 42.\nAmount left: %lu\n", 
-        //         (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved) -1);
-        //     // for (unsigned i = 0; i < raw->size_nrs; ++i) {
-        //     //     printf("Already have: %u\n", raw->recv_nrs[i]);
-        //     // }
-        // }
-        // // if (i != com.packet->nr)
-        // //     printf("WEIRDNESS: Did not receive packet %u\n", i);
-        if (com.packet->flags != 0)
-            printf("WEIRDNESS: Packet had flag %u\n", com.packet->flags);
+        if (com.packet->flags != 0) {
+            free(com.packet->data);
+            com_free(&com);
+            continue;
+        }
+        
         if (quality_suggest_compression(client->quality))
             decompress(&com);
+        if (quality_suggest_downsampling(client->quality))
+            resample(&com, 8);
 
-        uint8_t* buf_ptr = (uint8_t*) raw->data_ptr + com.packet->nr * constants_packets_size();
-        raw->recv_nrs[com.packet->nr] = true;
+        if (com.packet->nr >= constants_batch_packets_amount(client->quality->current)) {
+            printf("WEIRDNESS: Received packet nr %u, which is larger than %lu\n", com.packet->nr, constants_batch_packets_amount(client->quality->current));
+        } else if (com.packet->nr*constants_packets_size()+com.packet->size > constants_batch_size(client->quality->current)) {
+            printf("WEIRDNESS: Writing out of buf. Location %lu, bytes %u, max %lu\n", com.packet->nr * constants_packets_size(), com.packet->size,constants_batch_size(client->quality->current));
+        }
+        uint8_t* buf_ptr = ((uint8_t*) raw->data_ptr) + (com.packet->nr*constants_packets_size());
+        (raw->recv_nrs)[com.packet->nr] = true;
         raw->size_nrs += 1;
         memcpy(buf_ptr, com.packet->data, com.packet->size);
         free(com.packet->data);
@@ -93,13 +96,10 @@ static inline bool raw_batch_integrity_ok(const client_t* const client, raw_batc
             constants_batch_packets_amount(client->quality->current),
             raw->size_nrs);
         uint8_t* missing = raw_batch_get_missing_nrs(raw,constants_batch_packets_amount(client->quality->current));
-        printf("Send REJ for %lu packets.\n", constants_batch_packets_amount(client->quality->current) - raw->size_nrs);
         send_REJ(client, constants_batch_packets_amount(client->quality->current) - raw->size_nrs, missing);
         free(missing);
-        puts("Integrity failure");
         return false;
     }
-    puts("Integrity ok");
     return true;
 }
 
@@ -116,30 +116,23 @@ void receive_batch(client_t* const client) {
         raw_batch_receive(client, &raw);
     } while (!raw_batch_integrity_ok(client, &raw));
     client->quality->ok += constants_batch_packets_amount(client->quality->current);
-
     // Place received data in player buffer
     for (unsigned i = 0; i < constants_batch_packets_amount(client->quality->current); ++i) {
         uint8_t* buf_ptr = (uint8_t*) raw.data_ptr + i * constants_packets_size();
         buffer_add(client->player->buffer, buf_ptr, true);
     }
     raw_batch_free(&raw);
+    puts("OK");
     // batch received with success. Next time, ask next batch
     ++client->batch_nr;
 }
 
 enum recv_flag receive_ACK(const client_t* const client, bool consume) {
     com_t com;
-    printf("%p\n", (void*)client->sock);
     com_init(&com, client->fd, consume ? MSG_WAITALL : MSG_PEEK, client->sock, FLAG_NONE, 0);
     enum recv_flag flag = com_receive(&com);
-    if (flag != RECV_OK) {
-        printf("flag was not ok.\n");
-        if (flag == RECV_TIMEOUT)
-            printf("flag was TIMEOUT.\n");
-        else if (flag == RECV_ERROR)
-            printf("flag was RECV_ERROR.\n");
+    if (flag != RECV_OK)
         return flag;
-    }
     bool is_ACK = flags_is_ACK(com.packet->flags);
     free(com.packet->data);
     com_free(&com);

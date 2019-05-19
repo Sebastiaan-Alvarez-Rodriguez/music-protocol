@@ -45,8 +45,6 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
                     downsample(send, 8);
                 if (quality_suggest_compression(current->quality))
                     compress(send);
-                //TODO: ANDREW kijk
-                
                 break;
             case FINAL:
                 prepare_final(server, send, current, i);
@@ -78,6 +76,10 @@ static bool send_faulty(server_t* const server, com_t* const send, client_info_t
             //TODO: ANDREW kijk
                 current->music_ptr -= current->packets_per_batch * current->music_chuck_size;
                 prepare_intermediate(send, current, *faulty_ptr);
+                if (quality_suggest_downsampling(current->quality))
+                    downsample(send, 8);
+                if (quality_suggest_compression(current->quality))
+                    compress(send);
                 current->music_ptr += current->packets_per_batch * current->music_chuck_size;
                 break;
             case FINAL:

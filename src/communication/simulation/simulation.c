@@ -37,8 +37,5 @@ void simulate_flip_bits(void* const data, const uint16_t size, const float proba
 }
 
 inline bool simulate_drop_packet(const float probability) {
-    bool ans = ((float)((rand() % 100)+1)) < probability;
-    if (ans)
-        puts("DROPPING A PACKET");
-    return ans;
+    return ((float)((rand() % 100)+1)) < probability;
 }
