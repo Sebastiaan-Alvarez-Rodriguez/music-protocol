@@ -15,10 +15,10 @@
 #define SIMULATE
 #ifdef SIMULATE
     #include "communication/simulation/simulation.h"
-    #define SIMULATE_BIT_SOME_FLIP_CHANCE 1.0f
+    #define SIMULATE_BIT_SOME_FLIP_CHANCE 1.5f
     #define SIMULATE_BIT_FLIP_CHANCE 1.5f
-    #define SIMULATE_DROP_PACKET_CHANCE 1.1f
-    #define SIMULATE_RANDOM_WAIT_CHANCE 1.5f
+    #define SIMULATE_DROP_PACKET_CHANCE 15.0f
+    #define SIMULATE_RANDOM_WAIT_CHANCE 2.0f
     #ifdef SIMULATE_RANDOM_WAIT_CHANCE
         // Times below represent ms, must be integer
         #define SIMULATE_RANDOM_WAIT_MIN 1

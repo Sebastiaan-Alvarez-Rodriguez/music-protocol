@@ -65,7 +65,6 @@ void server_run(server_t* const server) {
         task_t task;
         client_info_t* current_client = NULL;
         com_init(&com, server->fd, MSG_WAITALL, (struct sockaddr*) &address, 0, 0);
-        puts("--------------BEGIN---------------");
         if (!receive_from_client(server, &com, &current_client, &task)) {
             com_free(&com);
             puts("Ignoring nonsense");
@@ -73,7 +72,6 @@ void server_run(server_t* const server) {
         }
 
         send_to_client(server, &com, current_client, &task);
-        puts("--------------END-----------------\n");
         task_free(&task);
         com_free(&com);
     }

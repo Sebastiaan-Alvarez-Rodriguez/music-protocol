@@ -9,6 +9,7 @@ typedef struct {
     size_t faulty;
     size_t ok;
     uint8_t current;
+    size_t last_measure;
 } quality_t;
 
 void quality_init(quality_t* const quality, uint8_t inital_quality);

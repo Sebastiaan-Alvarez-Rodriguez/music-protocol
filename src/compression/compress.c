@@ -71,7 +71,7 @@ __attribute__ ((unused)) static void print_hex(const size_t size, const void* co
 
 //224/16=014
 //014*14=196
-void compress(com_t* const com) {
+void compress(com_t* const com, bool free_buf) {
     uint16_t pairs_128_bits = com->packet->size / 16;//256/16=16
     uint16_t newsize = pairs_128_bits*14;
     void* new_data = malloc(newsize);//16*14=224
@@ -83,15 +83,16 @@ void compress(com_t* const com) {
         data_ptr+=8; //move 128 bits
         new_ptr+=7; //move 112 bits (last 16 not needed because compression)
     }
+    if (free_buf)
+        free(com->packet->data);
     com->packet->data = new_data;
     com->packet->size = newsize;
-    if (newsize > 256)
-        printf("COMPRESS CAUSES >255: %u\n", newsize);
+
 }
 
 //196/14=14
 //14*16=224
-void decompress(com_t* const com) {
+void decompress(com_t* const com, bool free_buf) {
     uint16_t pairs_112_bits = com->packet->size / 14;
     uint16_t newsize = pairs_112_bits*16;
     void* new_data = malloc(newsize);
@@ -103,13 +104,15 @@ void decompress(com_t* const com) {
         data_ptr+=7; //move 112 bits (last 16 not needed because compression)
         new_ptr+=8;  //move 128 bits
     }
+    if (free_buf)
+        free(com->packet->data);
     com->packet->data = new_data;
     com->packet->size = newsize;
     if (newsize > 256)
         printf("DECOMPRESS CAUSES >255: %u\n", newsize);
 }
 
-void downsample(com_t* const com, const size_t n) {
+void downsample(com_t* const com, const size_t n, bool free_buf) {
     const uint8_t frame_length = 4;
     const uint16_t newsize = (com->packet->size / n) * (n-1);
     void* compressed = malloc(newsize);
@@ -127,11 +130,13 @@ void downsample(com_t* const com, const size_t n) {
         ++compressed_ptr;
         ++data_ptr;
     }
+    if (free_buf)
+        free(com->packet->data);
     com->packet->size = newsize;
     com->packet->data = compressed;
 }
 
-void resample(com_t* const com, const size_t n) {
+void resample(com_t* const com, const size_t n, bool free_buf) {
     const uint8_t frame_length = 4;
     const uint16_t newsize = (com->packet->size / (n-1)) * n;
     void* decompressed = malloc(newsize);
@@ -150,6 +155,8 @@ void resample(com_t* const com, const size_t n) {
         ++decompressed_ptr;
         ++data_ptr;
     }
+    if (free_buf)
+        free(com->packet->data);
     com->packet->size = newsize;
     com->packet->data = decompressed;
 }

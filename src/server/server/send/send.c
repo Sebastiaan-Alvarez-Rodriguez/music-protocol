@@ -50,9 +50,9 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
                 return false;
         }
         if (quality_suggest_downsampling(current->quality))
-            downsample(send, 8);
+            downsample(send, 8, false);
         if (quality_suggest_compression(current->quality))
-            compress(send);
+            compress(send, quality_suggest_downsampling(current->quality));
 
         retval &= com_send(send);
 
@@ -103,19 +103,10 @@ static bool send_faulty(server_t* const server, com_t* const send, client_info_t
                 return false;
         }
         if (quality_suggest_downsampling(current->quality)) {
-            void* current_data = send->packet->data;
-            downsample(send, 8);
-            free(current_data);
+            downsample(send, 8, false);
         }
-        if (quality_suggest_compression(current->quality)) {
-            if (quality_suggest_downsampling(current->quality)) {
-                void* current_data = send->packet->data;
-                compress(send);
-                free(current_data);
-            } else {
-                compress(send);
-            }
-        }
+        if (quality_suggest_compression(current->quality))
+            compress(send, quality_suggest_downsampling(current->quality));
         retval &= com_send(send);
     }
     puts("=========++++++++==========");

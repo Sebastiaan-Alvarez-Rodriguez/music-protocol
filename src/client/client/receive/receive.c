@@ -69,22 +69,10 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
             continue;
         }
 
-        if (quality_suggest_compression(client->quality)) {
-            void* current_data = com.packet->data;
-            decompress(&com);
-            free(current_data);
-        }
-        if (quality_suggest_downsampling(client->quality)) {
-            if (quality_suggest_compression(client->quality)) {
-                void* current_data = com.packet->data;
-                resample(&com, 8);
-                free(current_data);
-            } else {
-                void* current_data = com.packet->data;
-                resample(&com, 8);
-                free(current_data);
-            }
-        }
+        if (quality_suggest_compression(client->quality))
+            decompress(&com, true);
+        if (quality_suggest_downsampling(client->quality))
+                resample(&com, 8, true);
 
         if (com.packet->nr >= constants_batch_packets_amount(client->quality->current)) {
             printf("WEIRDNESS: Received packet nr %u, which is larger than %lu\n", com.packet->nr, constants_batch_packets_amount(client->quality->current));
@@ -102,7 +90,7 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
 
 static inline bool raw_batch_integrity_ok(const client_t* const client, raw_batch_t* raw) {
     if (raw->size_nrs != constants_batch_packets_amount(client->quality->current)) {
-        printf("\rI miss packets! QTY: %u. Expected: %lu. Got: %u.",
+        printf("\rI miss packets! QTY: %u. Expected: %lu. Got: %u.\n",
             client->quality->current,
             constants_batch_packets_amount(client->quality->current),
             raw->size_nrs);
