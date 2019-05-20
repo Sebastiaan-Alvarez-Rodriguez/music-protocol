@@ -70,16 +70,13 @@ static void set_music_to_batch(client_info_t* const current, const uint32_t batc
     if((batch_nr - 1) == current->batch_nr) {
         current->music_ptr += batch_size;
         current->batch_nr = batch_nr;
-        printf("dd\n");
     }
-    // else if((batch_nr + 1) == current->batch_nr)
-    //     current->music_ptr -= batch_size;
+    current->music_ptr -= batch_size;
 }
 
-static void restore_music_to_batch(client_info_t* const current, const uint32_t batch_nr) {
+static void restore_music_to_batch(client_info_t* const current) {
     size_t batch_size = current->packets_per_batch * current->music_chuck_size;
-    // if((batch_nr + 1) == current->batch_nr)
-    //     current->music_ptr += batch_size;
+    current->music_ptr += batch_size;
 }
 
 static bool send_faulty(server_t* const server, com_t* const send, client_info_t* const current, const task_t* const task) {
@@ -122,7 +119,7 @@ static bool send_faulty(server_t* const server, com_t* const send, client_info_t
         retval &= com_send(send);
     }
     puts("=========++++++++==========");
-    restore_music_to_batch(current, batch_nr);
+    restore_music_to_batch(current);
     return retval;
 }
 
