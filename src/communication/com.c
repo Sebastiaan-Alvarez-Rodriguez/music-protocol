@@ -197,22 +197,6 @@ bool com_send(const com_t* const com) {
     return ret;
 }
 
-bool com_send_client(const com_t* const com) {
-    void* buf = NULL;
-    uint16_t size = 0;
-    if (!convert_send(&buf, &size, com->packet)) {
-        perror("convert_send");
-        return false;
-    }
-
-    bool ret = sendto(com->sockfd, buf, size, com->flags, com->address, com->addr_len) >= 0;
-    free(buf);
-    if(!ret)
-        perror("sendto");
-    return ret;
-}
-
-
 enum recv_flag com_receive(com_t* const com) {
     void* check_buf = malloc(sizeof(uint16_t)*4);
     if (check_buf == NULL || errno == ENOMEM)
@@ -237,7 +221,6 @@ enum recv_flag com_receive(com_t* const com) {
     //Checksum control for checksum 1
     uint16_t test_checksum1 = make_checksum1(size, flags, packetnr, checksum2);
     if (checksum1 != test_checksum1) {
-        puts("c1 fail");
         recvfrom(com->sockfd, check_buf, 0, MSG_WAITALL, com->address, &com->addr_len);
         return RECV_FAULTY;
     }
@@ -254,7 +237,6 @@ enum recv_flag com_receive(com_t* const com) {
     //Checksum control for checksum2
     uint16_t test_checksum2 = make_checksum2(buf_get_data(full_data), size);
     if (checksum2 != test_checksum2) {
-        puts("c2 fail");
         free(full_data);
         return RECV_FAULTY;
     }

@@ -65,6 +65,23 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
     return retval;
 }
 
+static void set_music_to_batch(client_info_t* const current, const uint32_t batch_nr) {
+    size_t batch_size = current->packets_per_batch * current->music_chuck_size;
+    if((batch_nr - 1) == current->batch_nr) {
+        current->music_ptr += batch_size;
+        current->batch_nr = batch_nr;
+        printf("dd\n");
+    }
+    // else if((batch_nr + 1) == current->batch_nr)
+    //     current->music_ptr -= batch_size;
+}
+
+static void restore_music_to_batch(client_info_t* const current, const uint32_t batch_nr) {
+    size_t batch_size = current->packets_per_batch * current->music_chuck_size;
+    // if((batch_nr + 1) == current->batch_nr)
+    //     current->music_ptr += batch_size;
+}
+
 static bool send_faulty(server_t* const server, com_t* const send, client_info_t* const current, const task_t* const task) {
     uint8_t* faulty_ptr = (uint8_t*) task->arg;
     bool retval = true;
@@ -72,11 +89,10 @@ static bool send_faulty(server_t* const server, com_t* const send, client_info_t
     faulty_ptr += 4;
     uint16_t batch_size = (task->arg_size - sizeof(uint32_t) / sizeof(uint8_t));
     puts("=========SEND_REJ==========");
-    printf("Batch_nr: %u\n", batch_nr);
+    printf("Batch_nr: %u - %u\n", batch_nr, current->batch_nr);
     printf("Batch_size: %u\n", batch_size);
     printf("Stage: %u\n", current->stage);
-    // if(current->batch_nr > batch_nr)
-        current->music_ptr -= current->packets_per_batch * current->music_chuck_size;
+    set_music_to_batch(current, batch_nr);
     for(unsigned i = 0; i < batch_size; ++i) {
         switch(current->stage) {
             case INTERMEDIATE:
@@ -104,11 +120,9 @@ static bool send_faulty(server_t* const server, com_t* const send, client_info_t
             }
         }
         retval &= com_send(send);
-        printf("Return send: %d\n", retval);
     }
     puts("=========++++++++==========");
-    // if(current->batch_nr > batch_nr)
-        current->music_ptr += current->packets_per_batch * current->music_chuck_size;
+    restore_music_to_batch(current, batch_nr);
     return retval;
 }
 

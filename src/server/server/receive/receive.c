@@ -83,7 +83,7 @@ static void process_intermediate(server_t* const server, com_t* const receive, c
     } else if(flags_is_RR(receive->packet->flags)) {
         puts("RR");
         task->type = SEND_BATCH;
-        client->packets_per_batch = constants_batch_packets_amount(client->quality->current);
+            // client->packets_per_batch = constants_batch_packets_amount(client->quality->current);
         if(client->bytes_sent + (client->packets_per_batch * client->music_chuck_size) >= server->mf->payload_size)
             client->stage = FINAL;
     } else if(flags_is_REJ(receive->packet->flags)) {

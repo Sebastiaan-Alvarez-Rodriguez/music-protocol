@@ -55,12 +55,10 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
         com_init(&com, client->fd, MSG_WAITALL, client->sock, FLAG_NONE, 0);
         enum recv_flag flag = com_receive(&com);
         if (flag == RECV_TIMEOUT) {
-            puts("e");
             client->quality->lost += (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved) - i;
             com_free(&com);
             break;
         } else if (flag == RECV_FAULTY) {
-            puts("d");
             client->quality->faulty += 1;
             com_free(&com);
             continue;
@@ -136,7 +134,7 @@ void receive_batch(client_t* const client) {
         buffer_add(client->player->buffer, buf_ptr, true);
     }
     raw_batch_free(&raw);
-    puts("OK");
+    puts("\nOK");
     // batch received with success. Next time, ask next batch
     ++client->batch_nr;
 }
