@@ -23,7 +23,7 @@ typedef struct {
    stage_t stage;
 
    bool in_use;
-   bool batch_ready;
+   uint32_t batch_nr;
    quality_t* quality;
    struct timeval timeout_timer;
 
@@ -43,8 +43,6 @@ void client_info_init(client_info_t* const client, const com_t* const com, void*
 bool addr_in_cmp(const struct sockaddr_in* const c1, const struct sockaddr_in* const c2);
 
 uint8_t* get_music_chunk(client_info_t* const client, const unsigned packet_nr);
-
-size_t calculate_packet_size(const size_t buffer_size, const size_t batch_size);
 
 // Prints a client_info struct
 void print_client_info(const client_info_t* const client);

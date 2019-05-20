@@ -9,6 +9,7 @@
 #include "communication/constants/constants.h"
 #include "communication/flags/flags.h"
 #include "server/client_info/client_info.h"
+#include "server/server/task/task.h"
 #include "server/server/receive/receive.h"
 #include "server/server/receive/client_search.h"
 #include "receive.h"
@@ -34,11 +35,11 @@ static enum check_output_flag receive_and_check(server_t* const server, com_t* r
     client_info_t* client = NULL;
 
     switch (search_client(server, receive->address, &client)) {
-        case MATCH:
-            break;
         case MATCH_UNUSED:
+            puts("NEW USER");
             client_info_init(client, receive, server->mf->samples);
             print_clients(server);
+        case MATCH:
             break;
         case NO_MATCH:
             *current = NULL;
@@ -80,34 +81,34 @@ static void process_intermediate(server_t* const server, com_t* const receive, c
     if(!client->in_use) {
         task->type = SEND_EOS;
     } else if(flags_is_RR(receive->packet->flags)) {
+        puts("RR");
         task->type = SEND_BATCH;
         client->packets_per_batch = constants_batch_packets_amount(client->quality->current);
-        puts("RR");
         if(client->bytes_sent + (client->packets_per_batch * client->music_chuck_size) >= server->mf->payload_size)
             client->stage = FINAL;
     } else if(flags_is_REJ(receive->packet->flags)) {
         puts("REJ");
-        task->type = SEND_FAULTY;
-        task->arg_size = receive->packet->size;
-        task->arg = malloc(receive->packet->size);
-        memcpy(task->arg, receive->packet->data, task->arg_size);
+        printf("size: %u\n", receive->packet->size);
+        task_set_faulty(task, receive->packet->size, receive->packet->data);
     } else if(flags_is_QTY(receive->packet->flags)) {
         task->type = SEND_ACK;
         client->quality->current = *(uint8_t*) receive->packet->data;
         client->packets_per_batch = constants_batch_packets_amount(client->quality->current);
     }
 }
-    
+
 static void process_final(com_t* const receive, client_info_t* const client, task_t* const task) {
     if(!client->in_use || flags_is_RR(receive->packet->flags)) {
         task->type = SEND_EOS;
+        if(client->in_use)
+            client_info_free(client);
         client->in_use = false;
-        client_info_free(client);
     } else if (flags_is_REJ(receive->packet->flags)) {
-        task->type = SEND_FAULTY;
-        task->arg_size = receive->packet->size;
-        task->arg = malloc(receive->packet->size);
-        memcpy(task->arg, receive->packet->data, task->arg_size);
+        task_set_faulty(task, receive->packet->size, receive->packet->data);
+    } else if(flags_is_QTY(receive->packet->flags)) {
+        task->type = SEND_ACK;
+        client->quality->current = *(uint8_t*) receive->packet->data;
+        client->packets_per_batch = constants_batch_packets_amount(client->quality->current);
     }
 }
 

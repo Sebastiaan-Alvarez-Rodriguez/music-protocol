@@ -22,13 +22,15 @@ static inline bool contains(raw_batch_t* raw, uint8_t item) {
     return (raw->recv_nrs)[item];
 }
 
-static inline uint8_t* raw_batch_get_missing_nrs(raw_batch_t* raw, uint8_t expected) {
+static inline uint8_t* raw_batch_get_missing_nrs(raw_batch_t* raw, uint8_t expected, size_t* len) {
     uint8_t* not_containing = malloc(sizeof(uint8_t)*(expected - raw->size_nrs));
     uint8_t* not_containing_ptr = not_containing;
+    *len = 0;
     for (uint8_t i = 0; i < expected; ++i)
         if (!contains(raw, i)) {
             *not_containing_ptr = i;
             ++not_containing_ptr;
+            ++(*len);
         }
     return not_containing;
 }
@@ -36,8 +38,8 @@ static inline uint8_t* raw_batch_get_missing_nrs(raw_batch_t* raw, uint8_t expec
 static void raw_batch_init(raw_batch_t* raw, size_t expected_packet_amt) {
     raw->data_ptr = malloc(expected_packet_amt * constants_packets_size());
     raw->recv_nrs = malloc(sizeof(bool)*expected_packet_amt);
-    bzero(raw->data_ptr, expected_packet_amt * constants_packets_size());
-    bzero(raw->recv_nrs, sizeof(bool)*expected_packet_amt);
+    memset(raw->data_ptr, 0, expected_packet_amt * constants_packets_size());
+    memset(raw->recv_nrs, 0, sizeof(bool)*expected_packet_amt);
     raw->size_nrs = 0;
 }
 
@@ -53,10 +55,12 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
         com_init(&com, client->fd, MSG_WAITALL, client->sock, FLAG_NONE, 0);
         enum recv_flag flag = com_receive(&com);
         if (flag == RECV_TIMEOUT) {
+            puts("e");
             client->quality->lost += (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved) - i;
             com_free(&com);
             break;
         } else if (flag == RECV_FAULTY) {
+            puts("d");
             client->quality->faulty += 1;
             com_free(&com);
             continue;
@@ -100,12 +104,13 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
 
 static inline bool raw_batch_integrity_ok(const client_t* const client, raw_batch_t* raw) {
     if (raw->size_nrs != constants_batch_packets_amount(client->quality->current)) {
-        printf("I miss packets! QTY: %u. Expected: %lu. Got: %u.\n",
+        printf("\rI miss packets! QTY: %u. Expected: %lu. Got: %u.",
             client->quality->current,
             constants_batch_packets_amount(client->quality->current),
             raw->size_nrs);
-        uint8_t* missing = raw_batch_get_missing_nrs(raw,constants_batch_packets_amount(client->quality->current));
-        send_REJ(client, constants_batch_packets_amount(client->quality->current) - raw->size_nrs, missing);
+        size_t missing_len = 0;
+        uint8_t* missing = raw_batch_get_missing_nrs(raw, constants_batch_packets_amount(client->quality->current), &missing_len);
+        send_REJ(client, missing_len, missing);
         free(missing);
         return false;
     }

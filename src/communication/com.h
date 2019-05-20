@@ -33,6 +33,10 @@ void com_init(com_t* const com, unsigned sockfd, int flags, struct sockaddr* con
 // Returns true on success, false otherwise (should check errno)
 bool com_send(const com_t* const com);
 
+// Send a packet to destined client
+// Returns true on success, false otherwise (should check errno)
+bool com_send_client(const com_t* const com);
+
 // Receive a packet from server
 // Returns RECV_OK on success, TIMEOUT/ERROR otherwise
 enum recv_flag com_receive(com_t* const com);
