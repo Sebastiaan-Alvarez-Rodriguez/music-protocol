@@ -14,5 +14,9 @@ typedef struct {
     void* arg;
 } task_t;
 
+void task_set_faulty(task_t* const task, const size_t buff_size, const void* const buff);
+
+void task_free(task_t* const task);
+
 
 #endif

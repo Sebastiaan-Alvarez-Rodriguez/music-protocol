@@ -61,6 +61,7 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
             free(send->packet->data);
     }
     current->music_ptr += current->packets_per_batch * current->music_chuck_size;
+    ++current->batch_nr;
     return retval;
 }
 
@@ -70,47 +71,44 @@ static bool send_faulty(server_t* const server, com_t* const send, client_info_t
     uint32_t batch_nr = *(uint32_t*) faulty_ptr;
     faulty_ptr += 4;
     uint16_t batch_size = (task->arg_size - sizeof(uint32_t) / sizeof(uint8_t));
-
-    for(unsigned i = 0; i < batch_size && faulty_ptr; ++i) {
+    puts("=========SEND_REJ==========");
+    printf("Batch_nr: %u\n", batch_nr);
+    printf("Batch_size: %u\n", batch_size);
+    printf("Stage: %u\n", current->stage);
+    // if(current->batch_nr > batch_nr)
+        current->music_ptr -= current->packets_per_batch * current->music_chuck_size;
+    for(unsigned i = 0; i < batch_size; ++i) {
         switch(current->stage) {
             case INTERMEDIATE:
-            //TODO: ANDREW kijk
-                current->music_ptr -= current->packets_per_batch * current->music_chuck_size;
-                prepare_intermediate(send, current, *faulty_ptr);
-                if (quality_suggest_downsampling(current->quality))
-                    downsample(send, 8);
-                if (quality_suggest_compression(current->quality)) {
-                    if (quality_suggest_downsampling(current->quality)) {
-                        void* current_data = send->packet->data;
-                        compress(send);
-                        free(current_data);
-                    } else {
-                        compress(send);
-                    }
-                }
-                current->music_ptr += current->packets_per_batch * current->music_chuck_size;
+                prepare_intermediate(send, current, faulty_ptr[i]);
                 break;
             case FINAL:
-                prepare_final(server, send, current, *faulty_ptr);
-                if (quality_suggest_downsampling(current->quality))
-                    downsample(send, 8);
-                if (quality_suggest_compression(current->quality)) {
-                    if (quality_suggest_downsampling(current->quality)) {
-                        void* current_data = send->packet->data;
-                        compress(send);
-                        free(current_data);
-                    } else {
-                        compress(send);
-                    }
-                }
+                prepare_final(server, send, current, faulty_ptr[i]);
                 break;
             default:
                 errno = EINVAL;
                 return false;
         }
+        if (quality_suggest_downsampling(current->quality)) {
+            void* current_data = send->packet->data;
+            downsample(send, 8);
+            free(current_data);
+        }
+        if (quality_suggest_compression(current->quality)) {
+            if (quality_suggest_downsampling(current->quality)) {
+                void* current_data = send->packet->data;
+                compress(send);
+                free(current_data);
+            } else {
+                compress(send);
+            }
+        }
         retval &= com_send(send);
-        faulty_ptr++;
+        printf("Return send: %d\n", retval);
     }
+    puts("=========++++++++==========");
+    // if(current->batch_nr > batch_nr)
+        current->music_ptr += current->packets_per_batch * current->music_chuck_size;
     return retval;
 }
 
