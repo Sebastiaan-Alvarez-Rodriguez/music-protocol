@@ -36,7 +36,6 @@ static enum check_output_flag receive_and_check(server_t* const server, com_t* r
 
     switch (search_client(server, receive->address, &client)) {
         case MATCH_UNUSED:
-            puts("NEW USER");
             client_info_init(client, receive, server->mf->samples);
             print_clients(server);
         case MATCH:
@@ -52,7 +51,6 @@ static enum check_output_flag receive_and_check(server_t* const server, com_t* r
 
 // Processes an initial request from the client
 static bool process_initial(const com_t* const receive, client_info_t* const client, task_t* const task) {
-    puts("process_initial");
     bool retval = false;
     if(flags_is_ACK(receive->packet->flags)) {
         client->quality->current = *(uint8_t*) receive->packet->data;
@@ -60,9 +58,6 @@ static bool process_initial(const com_t* const receive, client_info_t* const cli
         client->music_chuck_size = constants_packets_size();
         client->stage = INITIAL;
         task->type = SEND_ACK;
-
-        printf("Client packet size: %lu\n", client->music_chuck_size);
-        printf("Client packets per batch: %lu\n", client->packets_per_batch);
         retval = true;
     } else if(flags_is_RR(receive->packet->flags)) {
         client->stage = INTERMEDIATE;
@@ -77,18 +72,14 @@ static bool process_initial(const com_t* const receive, client_info_t* const cli
 }
 
 // Processes an intermediate request from the client
-static void process_intermediate(server_t* const server, com_t* const receive, client_info_t* const client, task_t* const task) {
+static void process_intermediate(com_t* const receive, client_info_t* const client, task_t* const task) {
     if(!client->in_use) {
         task->type = SEND_EOS;
     } else if(flags_is_RR(receive->packet->flags)) {
         puts("RR");
         task->type = SEND_BATCH;
-            // client->packets_per_batch = constants_batch_packets_amount(client->quality->current);
-        if(client->bytes_sent + (client->packets_per_batch * client->music_chuck_size) >= server->mf->payload_size)
-            client->stage = FINAL;
     } else if(flags_is_REJ(receive->packet->flags)) {
         puts("REJ");
-        printf("size: %u\n", receive->packet->size);
         task_set_faulty(task, receive->packet->size, receive->packet->data);
     } else if(flags_is_QTY(receive->packet->flags)) {
         task->type = SEND_ACK;
@@ -97,12 +88,17 @@ static void process_intermediate(server_t* const server, com_t* const receive, c
     }
 }
 
-static void process_final(com_t* const receive, client_info_t* const client, task_t* const task) {
+static void process_final(server_t* const server, com_t* const receive, client_info_t* const client, task_t* const task) {
     if(!client->in_use || flags_is_RR(receive->packet->flags)) {
-        task->type = SEND_EOS;
-        if(client->in_use)
-            client_info_free(client);
-        client->in_use = false;
+        if(client->bytes_sent < server->mf->payload_size) {
+            task->type = SEND_BATCH;
+        }
+        else {
+            task->type = SEND_EOS;
+            if(client->in_use)
+                client_info_free(client);
+            client->in_use = false;
+        }
     } else if (flags_is_REJ(receive->packet->flags)) {
         task_set_faulty(task, receive->packet->size, receive->packet->data);
     } else if(flags_is_QTY(receive->packet->flags)) {
@@ -127,10 +123,10 @@ bool receive_from_client(server_t* const server, com_t* receive, client_info_t**
                 return true;
             break;
         case INTERMEDIATE:
-            process_intermediate(server, receive, client, task);
+            process_intermediate(receive, client, task);
             break;
         case FINAL:
-            process_final(receive, client, task);
+            process_final(server, receive, client, task);
             break;
         default:
             return false;

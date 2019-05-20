@@ -27,7 +27,7 @@ typedef struct {
    quality_t* quality;
    struct timeval timeout_timer;
 
-   uint32_t bytes_sent;
+   size_t bytes_sent;
    size_t packets_per_batch;
 
    size_t buffer_size;

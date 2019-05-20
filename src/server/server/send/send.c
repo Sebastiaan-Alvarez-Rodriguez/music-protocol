@@ -10,22 +10,23 @@
 
 #include "send.h"
 
-static void prepare_music_packet(com_t* const send, client_info_t* const client, size_t bytes_to_send, const size_t packet_nr) {
+static void prepare_music_packet(com_t* const send, client_info_t* const client, size_t bytes_to_send, const size_t packet_nr, bool resend) {
     send->packet->data = get_music_chunk(client, packet_nr);
     send->packet->size = bytes_to_send;
     send->packet->nr = packet_nr;
-    client->bytes_sent += bytes_to_send;
+    if(!resend)
+        client->bytes_sent += bytes_to_send;
 }
 
-static void prepare_intermediate(com_t* const send, client_info_t* const client, const uint16_t packet_nr) {
-    prepare_music_packet(send, client, client->music_chuck_size, packet_nr);
+static void prepare_intermediate(com_t* const send, client_info_t* const client, const uint16_t packet_nr, bool resend) {
+    prepare_music_packet(send, client, client->music_chuck_size, packet_nr, resend);
 }
 
-static void prepare_final(server_t* const server, com_t* const send, client_info_t* const client, const uint16_t packet_nr) {
+static void prepare_final(server_t* const server, com_t* const send, client_info_t* const client, const uint16_t packet_nr, bool resend) {
     size_t bytes_to_send = client->music_chuck_size;
     if(client->bytes_sent + client->music_chuck_size > server->mf->payload_size)
         bytes_to_send = server->mf->payload_size - client->bytes_sent;
-    prepare_music_packet(send, client, bytes_to_send, packet_nr);
+    prepare_music_packet(send, client, bytes_to_send, packet_nr, resend);
 }
 
 static bool send_flags(com_t* const send, const uint8_t flags) {
@@ -40,10 +41,10 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
     for(unsigned i = 0; i < current->packets_per_batch; ++i) {
         switch(current->stage) {
             case INTERMEDIATE:
-                prepare_intermediate(send, current, i);
+                prepare_intermediate(send, current, i, false);
                 break;
             case FINAL:
-                prepare_final(server, send, current, i);
+                prepare_final(server, send, current, i, false);
                 break;
             default:
                 errno = EINVAL;
@@ -62,12 +63,15 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
     }
     current->music_ptr += current->packets_per_batch * current->music_chuck_size;
     ++current->batch_nr;
+    if(current->bytes_sent + (current->packets_per_batch * current->music_chuck_size) >= server->mf->payload_size)
+        current->stage = FINAL;
     return retval;
 }
 
-static void set_music_to_batch(client_info_t* const current, const uint32_t batch_nr) {
+static void set_music_to_batch(client_info_t* const current, const uint32_t batch_nr, bool* is_previous_batch) {
     size_t batch_size = current->packets_per_batch * current->music_chuck_size;
     if((batch_nr - 1) == current->batch_nr) {
+        *(is_previous_batch) = false;
         current->music_ptr += batch_size;
         current->batch_nr = batch_nr;
     }
@@ -85,18 +89,15 @@ static bool send_faulty(server_t* const server, com_t* const send, client_info_t
     uint32_t batch_nr = *(uint32_t*) faulty_ptr;
     faulty_ptr += 4;
     uint16_t batch_size = (task->arg_size - sizeof(uint32_t) / sizeof(uint8_t));
-    puts("=========SEND_REJ==========");
-    printf("Batch_nr: %u - %u\n", batch_nr, current->batch_nr);
-    printf("Batch_size: %u\n", batch_size);
-    printf("Stage: %u\n", current->stage);
-    set_music_to_batch(current, batch_nr);
+    bool is_previous_batch = true;
+    set_music_to_batch(current, batch_nr, &is_previous_batch);
     for(unsigned i = 0; i < batch_size; ++i) {
         switch(current->stage) {
             case INTERMEDIATE:
-                prepare_intermediate(send, current, faulty_ptr[i]);
+                prepare_intermediate(send, current, faulty_ptr[i], is_previous_batch);
                 break;
             case FINAL:
-                prepare_final(server, send, current, faulty_ptr[i]);
+                prepare_final(server, send, current, faulty_ptr[i], is_previous_batch);
                 break;
             default:
                 errno = EINVAL;
@@ -107,9 +108,12 @@ static bool send_faulty(server_t* const server, com_t* const send, client_info_t
         }
         if (quality_suggest_compression(current->quality))
             compress(send, quality_suggest_downsampling(current->quality));
+
         retval &= com_send(send);
+            if (quality_suggest_downsampling(current->quality)
+                || quality_suggest_compression(current->quality))
+                free(send->packet->data);
     }
-    puts("=========++++++++==========");
     restore_music_to_batch(current);
     return retval;
 }

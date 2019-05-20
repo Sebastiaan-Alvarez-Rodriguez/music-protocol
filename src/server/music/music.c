@@ -41,7 +41,6 @@ static bool music_file_open(music_file* mf, const char* const filename) {
 
 
     /* Skip to actual data fragment */
-    printf("data offset: %u\n", mf->mh->format_size + 16 + 4);
     uint8_t *p = (uint8_t*) mf->data + mf->mh->format_size + 16 + 4;
     uint32_t *size = (uint32_t*) (p + 4);
     do {
@@ -61,10 +60,9 @@ static bool music_file_open(music_file* mf, const char* const filename) {
 
     float playlength = (float) *size / (mf->mh->n_channels * mf->mh->n_samples_per_sec * mf->mh->w_bits_per_sample / 8);
 
-    printf("file %s, mode %s, samplerate %u, time %.1f sec\n",
+    printf("file %s, mode %s, samplerate %u, time %.1f sec, size %u\n",
             filename, mf->mh->n_channels == 2 ? "Stereo" : "Mono",
-            mf->mh->n_samples_per_sec, playlength);
-    printf("p: %s\n", (char*) p);
+            mf->mh->n_samples_per_sec, playlength, mf->payload_size);
     return true;
 }
 
