@@ -4,7 +4,7 @@ OBJS     = obj
 
 WARNINGS = -Wall -Wextra -Wno-unused-variable -pedantic -g
 IDIRS    = -I$(SRC)
-LDIRS    =  -lm -lasound
+LDIRS    =  -lm -lasound -pthread
 CFLAGS   = $(IDIRS) -std=gnu99 $(WARNINGS) $(LDIRS)
 
 find = $(shell find $1 -type f ! -path $3 -name $2 -print 2>/dev/null)

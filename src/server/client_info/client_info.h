@@ -10,6 +10,7 @@
 #include <stddef.h>
 #include "communication/com.h"
 #include "communication/quality/quality.h"
+#include "stats/stats.h"
 
 typedef enum {
     INITIAL,
@@ -25,7 +26,9 @@ typedef struct {
     bool in_use;
     uint32_t batch_nr;
     quality_t* quality;
-    struct timeval timeout_timer;
+    stat_t* stat;
+
+    int timeout_in_ms;
 
     size_t bytes_sent;
     size_t packets_per_batch;
@@ -37,6 +40,9 @@ typedef struct {
 
 // Initialize the client_info to the paramaters set in com_t
 void client_info_init(client_info_t* const client, const com_t* const com, void* const music_data);
+
+// Sets the timeout for a client in ms
+void client_info_set_timeout(client_info_t* const client, const int timeout_ms);
 
 // Compares two sockaddr_in structs, returns true if same address,
 // else returns false

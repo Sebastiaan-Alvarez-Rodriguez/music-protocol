@@ -10,19 +10,19 @@
     // #define SIMULATE_PRINT
 
     // Use if you want to simulate packet reordering
-    #define SIMULATE_RANDOMIZE_PACKET_ORDER_CHANCE 40.0f
+    #define SIMULATE_RANDOMIZE_PACKET_ORDER_CHANCE 35.0f
     #ifdef SIMULATE_RANDOMIZE_PACKET_ORDER_CHANCE
         #define SIMULATE_RANDOMIZE_PACKET_ORDER_SWAP_CHANCE 25.0f
     #endif
 
     // Use if you want to simulate bit flipping
-    #define SIMULATE_BIT_SOME_FLIP_CHANCE 10.0f
+    // #define SIMULATE_BIT_SOME_FLIP_CHANCE 8.0f
     #ifdef SIMULATE_BIT_SOME_FLIP_CHANCE
         #define SIMULATE_BIT_FLIP_CHANCE 15.0f
     #endif
 
     // Use if you want to simulate packet dropping
-    #define SIMULATE_DROP_PACKET_CHANCE 10.0f
+    #define SIMULATE_DROP_PACKET_CHANCE 5.0f
 
     // Use if you want to simulate packet waiting
     #define SIMULATE_RANDOM_WAIT_CHANCE 5.0f
