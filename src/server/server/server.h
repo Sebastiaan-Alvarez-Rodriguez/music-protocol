@@ -14,6 +14,13 @@ typedef struct {
     client_info_t* clients;
 } server_t;
 
+typedef struct {
+    server_t* server;
+    client_info_t* clients;
+    bool* running;
+} timeout_thread_args;
+
+
 // Initialize a server struct
 void server_init(server_t* const server);
 

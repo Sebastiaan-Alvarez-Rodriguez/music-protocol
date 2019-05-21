@@ -12,10 +12,16 @@ void client_info_init(client_info_t* const client, const com_t* const com, void*
     client->in_use = true;
     client->batch_nr = 0;
     client->quality = malloc(sizeof(quality_t));
+    client->stat = malloc(sizeof(stat_t));
+    stat_init(client->stat);
     client->music_ptr = music_data;
     client->bytes_sent = 0;
     client->packets_per_batch = 0;
     quality_init(client->quality, 0);
+}
+
+void client_info_set_timeout(client_info_t* const client, const int timeout_ms) {
+    client->timeout_in_ms = timeout_ms;
 }
 
 bool addr_in_cmp(const struct sockaddr_in* const c1, const struct sockaddr_in* const c2) {
@@ -54,4 +60,5 @@ void print_client_info(const client_info_t* const client) {
 
 void client_info_free(client_info_t* const client) {
     free(client->quality);
+    free(client->stat);
 }

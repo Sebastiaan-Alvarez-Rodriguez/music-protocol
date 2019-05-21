@@ -12,6 +12,7 @@
 #include "server/server/task/task.h"
 #include "server/server/receive/receive.h"
 #include "server/server/receive/client_search.h"
+#include "stats/stats.h"
 #include "receive.h"
 
 enum check_output_flag {
@@ -37,8 +38,10 @@ static enum check_output_flag receive_and_check(server_t* const server, com_t* r
     switch (search_client(server, receive->address, &client)) {
         case MATCH_UNUSED:
             client_info_init(client, receive, server->mf->samples);
-            print_clients(server);
+            client_info_set_timeout(client, 3000);
+            break;
         case MATCH:
+            client_info_set_timeout(client, 3000);
             break;
         case NO_MATCH:
             *current = NULL;
@@ -50,25 +53,20 @@ static enum check_output_flag receive_and_check(server_t* const server, com_t* r
 }
 
 // Processes an initial request from the client
-static bool process_initial(const com_t* const receive, client_info_t* const client, task_t* const task) {
-    bool retval = false;
+static void process_initial(const com_t* const receive, client_info_t* const client, task_t* const task) {
     if(flags_is_ACK(receive->packet->flags)) {
         client->quality->current = *(uint8_t*) receive->packet->data;
         client->packets_per_batch = constants_batch_packets_amount(client->quality->current);
         client->music_chuck_size = constants_packets_size();
         client->stage = INITIAL;
         task->type = SEND_ACK;
-        retval = true;
     } else if(flags_is_RR(receive->packet->flags)) {
         client->stage = INTERMEDIATE;
         task->type = SEND_BATCH;
-        retval = true;
     } else if(flags_is_REJ(receive->packet->flags)) {
         client->stage = INTERMEDIATE;
         task->type = SEND_FAULTY;
-        retval = true;
     }
-    return retval;
 }
 
 // Processes an intermediate request from the client
@@ -95,8 +93,10 @@ static void process_final(server_t* const server, com_t* const receive, client_i
         }
         else {
             task->type = SEND_EOS;
-            if(client->in_use)
+            if(client->in_use) {
+                stat_print(client->stat);
                 client_info_free(client);
+            }
             client->in_use = false;
         }
     } else if (flags_is_REJ(receive->packet->flags)) {
@@ -119,8 +119,7 @@ bool receive_from_client(server_t* const server, com_t* receive, client_info_t**
     }
     switch (client->stage) {
         case INITIAL:
-            if(!process_initial(receive, client, task))
-                return true;
+            process_initial(receive, client, task);
             break;
         case INTERMEDIATE:
             process_intermediate(receive, client, task);

@@ -2,12 +2,14 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <time.h>
 
 #include "communication/flags/flags.h"
 #include "communication/quality/quality.h"
 #include "compression/compress.h"
 #include "server/client_info/client_info.h"
-
+#include "stats/stats.h"
+#include "communication/constants/constants.h"
 #include "communication/simulation/simulation.h"
 
 #include "send.h"
@@ -53,6 +55,7 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
             simulate_randomize_packet_order(nums, current->packets_per_batch, SIMULATE_RANDOMIZE_PACKET_ORDER_SWAP_CHANCE);
         }
     #endif
+    clock_t cur = clock();
 
     for(unsigned i = 0; i < current->packets_per_batch; ++i) {
         switch(current->stage) {
@@ -77,6 +80,8 @@ static bool send_batch(server_t* const server, com_t* const send, client_info_t*
             || quality_suggest_compression(current->quality))
             free(send->packet->data);
     }
+    current->stat->clock_diff += clock() - cur;
+    current->stat->bytes += constants_batch_size(current->quality->current);
     current->music_ptr += current->packets_per_batch * current->music_chuck_size;
     ++current->batch_nr;
     if(current->bytes_sent + (current->packets_per_batch * current->music_chuck_size) >= server->mf->payload_size)

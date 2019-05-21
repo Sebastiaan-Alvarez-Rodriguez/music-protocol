@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>
 
 #include <unistd.h>
 #include <sys/socket.h>
@@ -10,6 +11,7 @@
 #include <arpa/inet.h>
 
 #include "task/task.h"
+#include "stats/stats.h"
 #include "communication/flags/flags.h"
 #include "server/music/music.h"
 #include "receive/receive.h"
@@ -56,9 +58,38 @@ bool server_set_num_clients(server_t* const server, const unsigned max_clients) 
     return server->clients != NULL && errno != ENOMEM;
 }
 
+void* thread_run_timeout_timers(void* args) {
+    timeout_thread_args* targs = (timeout_thread_args*) args;
+    client_info_t* clients = targs->clients;
+    server_t* server = targs->server;
+    struct timespec time = {1, 0};
+    while(targs->running) {
+        for(unsigned i = 0; i < server->max_clients; ++i) {
+            if(clients[i].in_use) {
+                clients[i].timeout_in_ms -= (time.tv_sec * 1000);
+                if(clients[i].timeout_in_ms <= 0) {
+                    printf("Closing client [%u]\n", i);
+                    stat_print(clients[i].stat);
+                    client_info_free(&clients[i]);
+                    clients[i].in_use = false;
+                    print_clients(server);
+                }
+            }
+        }
+        clock_nanosleep(CLOCK_REALTIME, 0, &time, NULL);
+    }
+    pthread_exit(0);
+}
+
 void server_run(server_t* const server) {
     bool running = true;
     struct sockaddr_in client;
+    pthread_t timeout_thread;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    timeout_thread_args targs = {server, server->clients, &running};
+    pthread_create(&timeout_thread, &attr, &thread_run_timeout_timers, &targs);
+
     while(running) {
         com_t com;
         struct sockaddr_in address;
@@ -71,6 +102,7 @@ void server_run(server_t* const server) {
         task_free(&task);
         com_free(&com);
     }
+    pthread_join(timeout_thread, NULL);
 }
 
 void server_free(server_t* const server) {
