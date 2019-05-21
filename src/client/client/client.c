@@ -13,6 +13,7 @@
 #include "communication/flags/flags.h"
 #include "communication/quality/quality.h"
 #include "menu/menu.h"
+#include "stats/stats.h"
 #include "client.h"
 
 // Sets up sockets to connect to a server at given address and port.
@@ -60,7 +61,8 @@ void client_init(client_t* const client, const char* address, const unsigned sho
     client->player = malloc(sizeof(player_t));
     client->quality = malloc(sizeof(quality_t));
     quality_init(client->quality, initial_quality);
-
+    client->stat = malloc(sizeof(stat_t));
+    stat_init(client->stat);
     client->batch_nr = 0;
     client->EOS_received = false;
     bool retry;
@@ -88,10 +90,10 @@ void client_init(client_t* const client, const char* address, const unsigned sho
     player_init(client->player, buffer_size / constants_packets_size(), constants_packets_size());
 }
 
-void client_fill_initial_buffer(client_t* const client, clock_t* const start, size_t* const bytes_received) {
+void client_fill_initial_buffer(client_t* const client) {
     puts("Filling initial buffer...");
     do {
-        receive_batch(client, start, bytes_received);
+        receive_batch(client);
         printf("%lu%c\n", (buffer_used_size(client->player->buffer)*100) / buffer_capacity(client->player->buffer), '%');
     } while(!client->EOS_received && buffer_free_size(client->player->buffer) >= constants_batch_packets_amount(client->quality->current));
     puts("Done! Playing...");
@@ -106,6 +108,15 @@ void client_adjust_quality(client_t* const client) {
             send_QTY(client);
         } while (receive_ACK(client, true) != RECV_OK);
     }
+}
+
+void client_print_stats(const client_t* const client) {
+    if (client->quality->last_measure == 4)
+        printf("OK: %04lu\nFAULTY: %04lu\nLOST: %04lu\nCurrent QTY: %u\n\n", 
+            client->quality->ok,
+            client->quality->faulty,
+            client->quality->lost,
+            client->quality->current);
 }
 
 void client_free(client_t* const client) {

@@ -65,12 +65,9 @@ void server_run(server_t* const server) {
         task_t task;
         client_info_t* current_client = NULL;
         com_init(&com, server->fd, MSG_WAITALL, (struct sockaddr*) &address, 0, 0);
-        puts("====Begin====");
         if (receive_from_client(server, &com, &current_client, &task)) {
             send_to_client(server, &com, current_client, &task);
-            printf("Progress: [%lu / %u]\n", current_client->bytes_sent, server->mf->payload_size);
         }
-        puts("====End====");
         task_free(&task);
         com_free(&com);
     }

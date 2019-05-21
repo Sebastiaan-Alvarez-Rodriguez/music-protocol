@@ -1,9 +1,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include "communication/com.h"
 
+#include "communication/com.h"
 #include "simulation.h"
 
 static void swap(unsigned* array, unsigned a, unsigned b) {
@@ -12,8 +11,7 @@ static void swap(unsigned* array, unsigned a, unsigned b) {
     array[b] = c;
 }
 
-
-void simulate_swap_packets(unsigned* const packet_nrs, const size_t batch_len, const float probability) {
+void simulate_randomize_packet_order(unsigned* const packet_nrs, const size_t batch_len, const float probability) {
     for(unsigned i = 0; i < batch_len; ++i) {
         float probability_swapped = (rand() % (100 + 1));
         if(probability_swapped < probability)
@@ -22,7 +20,7 @@ void simulate_swap_packets(unsigned* const packet_nrs, const size_t batch_len, c
 }
 
 void simulate_flip_bits(void* const data, const uint16_t size, const float probability) {
-    for(unsigned i = 16; i < size; ++i) {
+    for(unsigned i = 64; i < size; ++i) {
         float bit_prob = (float)(rand() % (100 + 1));
         if(bit_prob < probability) {
             unsigned location_bit = rand() % 8;

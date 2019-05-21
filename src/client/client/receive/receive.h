@@ -1,10 +1,10 @@
 #ifndef RECEIVE
 #define RECEIVE
-#include <time.h>
+
 #include "client/client/client.h"
 
 // Receive a batch from the server
-void receive_batch(client_t* const client, clock_t* const start, size_t* bytes_received);
+void receive_batch(client_t* const client);
 
 // Check if a ACK was received
 // consume determines whether received packet(s) should be consumed

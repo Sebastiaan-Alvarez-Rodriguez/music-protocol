@@ -8,8 +8,7 @@
 #include "client/client/client.h"
 #include "client/musicplayer/player.h"
 #include "communication/constants/constants.h"
-
-#include "communication/checksums/checksum.h"
+#include "stats/stats.h"
 
 #include "buffer/buffer.h"
 
@@ -28,17 +27,21 @@ static void showHelp(const char *prog_name) {
 void run(const char* address, const unsigned short port, const unsigned buffer_size, const unsigned initial_quality) {
     client_t client;
     client_init(&client, address, port, buffer_size, initial_quality);
-    clock_t start = clock();
-    size_t bytes_received = 0;
-    client_fill_initial_buffer(&client, &start, &bytes_received);
+    client_fill_initial_buffer(&client);
 
     while(!client.EOS_received) {
         while (buffer_free_size(client.player->buffer) < constants_batch_packets_amount(client.quality->current))
             player_play(client.player);
 
-        receive_batch(&client, &start, &bytes_received);
+        clock_t cur = clock();
+        receive_batch(&client);
+        client.stat->clock_diff += clock() - cur;
+        client.stat->bytes += constants_batch_size(client.quality->current);
+
+        client_print_stats(&client);
         client_adjust_quality(&client);
     }
+    stat_print(client.stat);
     // Play the last buffered music
     while (!buffer_empty(client.player->buffer))
         player_play(client.player);
@@ -84,7 +87,6 @@ int main(int argc, char **argv) {
                 }
                 break;
             case 'i':
-                // TODO: gaat dit niet fout? (memory leaks?)
                 server_address = optarg;
                 break;
             case 'p':
@@ -101,18 +103,5 @@ int main(int argc, char **argv) {
 
     printf("Buffersize is set to approx. %lu KB.\n", buffer_size/1024);
     run(server_address, bind_port, buffer_size, initial_quality);
-    // uint16_t buf[3];
-    // buf[0] = (uint16_t) 255;
-    // buf[1] = (((uint8_t) 22) << 8) | (uint8_t) 0;
-    // buf[2] = (uint16_t) 0x2FA5;
-    // uint16_t alpha = generate_16bit_fletcher(buf, sizeof(buf));
-    // printf("Alpha: %u\n", alpha);
-
-    // uint16_t buf_miss[3];
-    // buf_miss[0] = (uint16_t) 254;
-    // buf_miss[1] = (((uint8_t) 22) << 8) | (uint8_t) 0x0;
-    // buf_miss[2] = (uint16_t) 0x2FA5;
-    // uint16_t beta = generate_16bit_fletcher(buf_miss, sizeof(buf_miss));
-    // printf("Beta: %u\n", beta);
     return 0;
 }

@@ -9,22 +9,9 @@
 
 #include "communication/packet/packet.h"
 #include "communication/checksums/checksum.h"
-
+#include "communication/simulation/simulation.h"
 #include "com.h"
 
-#define SIMULATE
-#ifdef SIMULATE
-    #include "communication/simulation/simulation.h"
-    #define SIMULATE_BIT_SOME_FLIP_CHANCE 20.0f
-    #define SIMULATE_BIT_FLIP_CHANCE 20.0f
-    #define SIMULATE_DROP_PACKET_CHANCE 5.0f
-    #define SIMULATE_RANDOM_WAIT_CHANCE 5.0f
-    #ifdef SIMULATE_RANDOM_WAIT_CHANCE
-        // Times below represent ms, must be integer
-        #define SIMULATE_RANDOM_WAIT_MIN 1
-        #define SIMULATE_RANDOM_WAIT_MAX 10
-    #endif
-#endif
 ///////////////////////////////////////////////////
 // Important - Read me
 // Raw buffer convention:
@@ -156,6 +143,7 @@ void com_init(com_t* const com, unsigned sockfd, int flags, struct sockaddr* con
 
 bool com_send(const com_t* const com) {
     uint16_t size = 0;
+
     void* buf = convert_send(&size, com->packet);
     if (!buf) {
         perror("convert_send");
@@ -164,23 +152,35 @@ bool com_send(const com_t* const com) {
 
     #ifdef SIMULATE
     if (com->packet->flags != 0x1) {
+        #ifdef SIMULATE_DROP_PACKET_CHANCE
         if (simulate_random_chance(SIMULATE_DROP_PACKET_CHANCE)) {
+            #ifdef SIMULATE_PRINT
             if (com->packet->flags != 0)
                 printf("DROPPING A PACKET with flags: %x\n", com->packet->flags);
             else
                 puts("DROPPING A PACKET");
+            #endif
             free(buf);
             return true;
         }
+        #endif
+        #ifdef SIMULATE_BIT_SOME_FLIP_CHANCE
         if (simulate_random_chance(SIMULATE_BIT_SOME_FLIP_CHANCE)) {
+            #ifdef SIMULATE_PRINT
             printf("FLIP RANDOM BITS\n");
+            #endif
             simulate_flip_bits(buf, size, SIMULATE_BIT_FLIP_CHANCE);
         }
+        #endif
+        #ifdef SIMULATE_RANDOM_WAIT_CHANCE
         if (simulate_random_chance(SIMULATE_RANDOM_WAIT_CHANCE)) {
             size_t amt = simulate_random_wait_amt(SIMULATE_RANDOM_WAIT_MIN, SIMULATE_RANDOM_WAIT_MAX);
+            #ifdef SIMULATE_PRINT
             printf("SLEEPING for %lu ms\n", amt);
+            #endif
             usleep(amt);
         }
+        #endif
     }
     #endif
 
@@ -216,7 +216,6 @@ enum recv_flag com_receive(com_t* const com) {
     uint16_t test_checksum1 = make_checksum1(size, flags, packetnr, checksum2);
     if (checksum1 != test_checksum1) {
         recvfrom(com->sockfd, check_buf, 0, MSG_WAITALL, com->address, &com->addr_len);
-        puts("FAULTYCOM checksum1");
         return RECV_FAULTY;
     }
 

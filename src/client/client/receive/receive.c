@@ -26,7 +26,6 @@ static inline bool contains(raw_batch_t* raw, uint8_t item) {
 static inline uint8_t* raw_batch_get_missing_nrs(raw_batch_t* raw, uint8_t expected, size_t* len) {
     size_t missing = sizeof(uint8_t)*(expected - raw->size_nrs);
     uint8_t* not_containing = malloc(missing);
-    printf("allocated space for %lu non-containing nrs\n", missing);
     uint8_t* not_containing_ptr = not_containing;
     *len = 0;
     for (uint8_t i = 0; i < expected; ++i) {
@@ -54,7 +53,7 @@ static void raw_batch_free(raw_batch_t* raw) {
     free(raw->recv_nrs);
 }
 
-static void raw_batch_receive(const client_t* const client, raw_batch_t* raw, clock_t* const start, size_t* const bytes_received) {
+static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
     uint8_t initial_size_retrieved = raw->size_nrs;
     for (unsigned i = 0; i < (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved); ++i) {
         com_t com;
@@ -65,12 +64,10 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw, cl
             com_free(&com);
             break;
         } else if (flag == RECV_FAULTY) {
-            puts("FAULTY");
             client->quality->faulty += 1;
             com_free(&com);
             continue;
         } else if (flag == RECV_ERROR) {
-            puts("ERROR");
             com_free(&com);
             continue;
         }
@@ -85,21 +82,6 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw, cl
         if (quality_suggest_downsampling(client->quality))
                 resample(&com, 8, true);
 
-        if (com.packet->nr >= constants_batch_packets_amount(client->quality->current)) {
-            printf("WEIRDNESS: Received packet nr %u, which is larger than %lu\n", com.packet->nr, constants_batch_packets_amount(client->quality->current));
-        } else if (com.packet->nr*constants_packets_size()+com.packet->size > constants_batch_size(client->quality->current)) {
-            printf("WEIRDNESS: Writing out of buf. Location %lu, bytes %u, max %lu\n", com.packet->nr * constants_packets_size(), com.packet->size,constants_batch_size(client->quality->current));
-        }
-
-        *bytes_received += com.packet->size;
-        if(((clock() - *start) * 1000) / CLOCKS_PER_SEC >= 1) {
-            puts("------------");
-            printf("Network Speed: %.2f KB/s\n", (double) (*bytes_received / 1000));
-            *start = clock();
-            *bytes_received = 0;
-            puts("------------");
-        }
-
         uint8_t* buf_ptr = ((uint8_t*) raw->data_ptr) + (com.packet->nr*constants_packets_size());
         (raw->recv_nrs)[com.packet->nr] = true;
         raw->size_nrs += 1;
@@ -111,10 +93,6 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw, cl
 
 static inline bool raw_batch_integrity_ok(const client_t* const client, raw_batch_t* raw) {
     if (raw->size_nrs != constants_batch_packets_amount(client->quality->current)) {
-        printf("\rI miss packets! QTY: %u. Expected: %lu. Got: %u.\n",
-            client->quality->current,
-            constants_batch_packets_amount(client->quality->current),
-            raw->size_nrs);
         size_t missing_len = 0;
         uint8_t* missing = raw_batch_get_missing_nrs(raw, constants_batch_packets_amount(client->quality->current), &missing_len);
         send_REJ(client, missing_len, missing);
@@ -124,7 +102,7 @@ static inline bool raw_batch_integrity_ok(const client_t* const client, raw_batc
     return true;
 }
 
-void receive_batch(client_t* const client, clock_t* const start, size_t* bytes_received) {
+void receive_batch(client_t* const client) {
     send_RR(client);
     raw_batch_t raw;
     raw_batch_init(&raw, constants_batch_packets_amount(client->quality->current));
@@ -134,7 +112,7 @@ void receive_batch(client_t* const client, clock_t* const start, size_t* bytes_r
             raw_batch_free(&raw);
             return;
         }
-        raw_batch_receive(client, &raw, start, bytes_received);
+        raw_batch_receive(client, &raw);
     } while (!raw_batch_integrity_ok(client, &raw));
     client->quality->ok += constants_batch_packets_amount(client->quality->current);
     // Place received data in player buffer
@@ -143,7 +121,6 @@ void receive_batch(client_t* const client, clock_t* const start, size_t* bytes_r
         buffer_add(client->player->buffer, buf_ptr, true);
     }
     raw_batch_free(&raw);
-    puts("\nOK");
     // batch received with success. Next time, ask next batch
     ++client->batch_nr;
 }

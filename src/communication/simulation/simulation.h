@@ -4,7 +4,67 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-void simulate_swap_packets(unsigned* const packet_nrs, const size_t batch_len, const float probability);
+#define SIMULATE
+#ifdef SIMULATE
+    // Use only if you want to print verbose information about simulation
+    // #define SIMULATE_PRINT
+
+    // Use if you want to simulate packet reordering
+    #define SIMULATE_RANDOMIZE_PACKET_ORDER_CHANCE 40.0f
+    #ifdef SIMULATE_RANDOMIZE_PACKET_ORDER_CHANCE
+        #define SIMULATE_RANDOMIZE_PACKET_ORDER_SWAP_CHANCE 25.0f
+    #endif
+
+    // Use if you want to simulate bit flipping
+    #define SIMULATE_BIT_SOME_FLIP_CHANCE 10.0f
+    #ifdef SIMULATE_BIT_SOME_FLIP_CHANCE
+        #define SIMULATE_BIT_FLIP_CHANCE 15.0f
+    #endif
+
+    // Use if you want to simulate packet dropping
+    #define SIMULATE_DROP_PACKET_CHANCE 10.0f
+
+    // Use if you want to simulate packet waiting
+    #define SIMULATE_RANDOM_WAIT_CHANCE 5.0f
+    #ifdef SIMULATE_RANDOM_WAIT_CHANCE
+        // Times below represent ms, must be integer
+        #define SIMULATE_RANDOM_WAIT_MIN 1
+        #define SIMULATE_RANDOM_WAIT_MAX 10
+    #endif
+#endif
+
+/*
+// #define SIMULATE
+#ifdef SIMULATE
+    // Use only if you want to print verbose information about simulation
+    // #define SIMULATE_PRINT
+
+    // Use if you want to simulate packet reordering
+    #define SIMULATE_RANDOMIZE_PACKET_ORDER_CHANCE 35.0f
+    #ifdef SIMULATE_RANDOMIZE_PACKET_ORDER_CHANCE
+        #define SIMULATE_RANDOMIZE_PACKET_ORDER_SWAP_CHANCE 25.0f
+    #endif
+
+    // Use if you want to simulate bit flipping
+    // #define SIMULATE_BIT_SOME_FLIP_CHANCE 8.0f
+    #ifdef SIMULATE_BIT_SOME_FLIP_CHANCE
+        #define SIMULATE_BIT_FLIP_CHANCE 15.0f
+    #endif
+
+    // Use if you want to simulate packet dropping
+    #define SIMULATE_DROP_PACKET_CHANCE 5.0f
+
+    // Use if you want to simulate packet waiting
+    #define SIMULATE_RANDOM_WAIT_CHANCE 5.0f
+    #ifdef SIMULATE_RANDOM_WAIT_CHANCE
+        // Times below represent ms, must be integer
+        #define SIMULATE_RANDOM_WAIT_MIN 1
+        #define SIMULATE_RANDOM_WAIT_MAX 10
+    #endif
+#endif
+*/
+
+void simulate_randomize_packet_order(unsigned* const packet_nrs, const size_t batch_len, const float probability);
 
 // Takes a raw buffer, size of this buffer
 // and probability for a flip to occur in a bit

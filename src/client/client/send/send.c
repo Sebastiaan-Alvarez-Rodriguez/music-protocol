@@ -2,7 +2,6 @@
 
 #include "communication/com.h"
 #include "communication/flags/flags.h"
-
 #include "send.h"
 
 void send_initial_communication(client_t* const client) {

@@ -8,6 +8,8 @@
 #include "compression/compress.h"
 #include "server/client_info/client_info.h"
 
+#include "communication/simulation/simulation.h"
+
 #include "send.h"
 
 static void prepare_music_packet(com_t* const send, client_info_t* const client, size_t bytes_to_send, const size_t packet_nr, bool resend) {
@@ -38,13 +40,27 @@ static bool send_flags(com_t* const send, const uint8_t flags) {
 
 static bool send_batch(server_t* const server, com_t* const send, client_info_t* const current) {
     bool retval = true;
+    unsigned nums[current->packets_per_batch];
+
+    for(unsigned i = 0; i < current->packets_per_batch; ++i)
+        nums[i] = i;
+
+    #ifdef SIMULATE_RANDOMIZE_PACKET_ORDER_CHANCE
+        if (simulate_random_chance(SIMULATE_RANDOMIZE_PACKET_ORDER_CHANCE)) {
+            #ifdef SIMULATE_PRINT
+            puts("RANDOMIZING PACKET ORDER");
+            #endif
+            simulate_randomize_packet_order(nums, current->packets_per_batch, SIMULATE_RANDOMIZE_PACKET_ORDER_SWAP_CHANCE);
+        }
+    #endif
+
     for(unsigned i = 0; i < current->packets_per_batch; ++i) {
         switch(current->stage) {
             case INTERMEDIATE:
-                prepare_intermediate(send, current, i, false);
+                prepare_intermediate(send, current, nums[i], false);
                 break;
             case FINAL:
-                prepare_final(server, send, current, i, false);
+                prepare_final(server, send, current, nums[i], false);
                 break;
             default:
                 errno = EINVAL;

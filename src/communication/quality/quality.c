@@ -42,17 +42,14 @@ bool quality_adjust(quality_t* const quality) {
 
     bool changed = false;
     if (quality->current < 5 && quality_should_increase(quality)) {
-        puts("Quality should increase");
         quality->current += 1;
         quality_reset_stats(quality);
         changed = true;
     } else if (quality->current > 1 && quality_should_decrease(quality)) {
-        puts("Quality should decrease");
         quality->current -= 1;
         quality_reset_stats(quality);
         changed = true;
     } else {
-        puts("Quality should not change");
         quality_reset_stats(quality);
     }
     return changed;
