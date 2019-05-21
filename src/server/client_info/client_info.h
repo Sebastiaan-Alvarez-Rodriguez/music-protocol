@@ -18,21 +18,21 @@ typedef enum {
 } stage_t;
 
 typedef struct {
-   struct sockaddr_in client_addr;
+    struct sockaddr_in client_addr;
 
-   stage_t stage;
+    stage_t stage;
 
-   bool in_use;
-   uint32_t batch_nr;
-   quality_t* quality;
-   struct timeval timeout_timer;
+    bool in_use;
+    uint32_t batch_nr;
+    quality_t* quality;
+    struct timeval timeout_timer;
 
-   size_t bytes_sent;
-   size_t packets_per_batch;
+    size_t bytes_sent;
+    size_t packets_per_batch;
 
-   size_t buffer_size;
-   size_t music_chuck_size;
-   uint8_t* music_ptr;
+    size_t buffer_size;
+    size_t music_chuck_size;
+    uint8_t* music_ptr;
 } client_info_t;
 
 // Initialize the client_info to the paramaters set in com_t
