@@ -3,7 +3,6 @@
 
 #include <stdbool.h>
 #include "server/music/music.h"
-#include "asp.h"
 #include "server/client_info/client_info.h"
 #include "communication/com.h"
 
@@ -14,6 +13,13 @@ typedef struct {
     unsigned max_clients;
     client_info_t* clients;
 } server_t;
+
+typedef struct {
+    server_t* server;
+    client_info_t* clients;
+    bool* running;
+} timeout_thread_args;
+
 
 // Initialize a server struct
 void server_init(server_t* const server);

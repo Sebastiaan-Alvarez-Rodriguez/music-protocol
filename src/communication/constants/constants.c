@@ -16,7 +16,7 @@
 // (512 bytes is considered 'safe' for UDP protocol (no MTU exceeds))
 // (For streaming services, many small packets are considered better)
 // 
-// packets per batch | quality
+// packets per batch   | quality
 // 10.00 / 0.25 = 040  | 1
 // 15.00 / 0.25 = 060  | 2
 // 25.00 / 0.25 = 100  | 3

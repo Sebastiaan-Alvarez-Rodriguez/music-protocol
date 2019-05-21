@@ -1,5 +1,6 @@
 #ifndef RECEIVE
 #define RECEIVE
+
 #include "client/client/client.h"
 
 // Receive a batch from the server

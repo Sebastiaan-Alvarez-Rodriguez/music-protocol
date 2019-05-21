@@ -1,5 +1,6 @@
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 #include "communication/com.h"
 #include "compress.h"
 
@@ -57,9 +58,24 @@ static void unpack_128bit(const void* const data, void* const new_data) {
     *new_ptr = *data_ptr << 2;
 }
 
-void compress(com_t* const com) {
+//Print all bits for given size in buffer. assumes little endian
+__attribute__ ((unused)) static void print_hex(const size_t size, const void* const ptr) {
+    uint8_t* hexptr = (uint8_t*) ptr;
+
+    for (int i=size-1;i>=0;i--) {
+            uint8_t byte = hexptr[i];
+            printf("%X", byte);
+        }
+    puts("");
+}
+
+//224/16=014
+//014*14=196
+void compress(com_t* const com, bool free_buf) {
     uint16_t pairs_128_bits = com->packet->size / 16;//256/16=16
-    void* new_data = malloc(pairs_128_bits*14);//16*14=224
+    uint16_t newsize = pairs_128_bits*14;
+    void* new_data = malloc(newsize);//16*14=224
+    bzero(new_data, newsize);
     uint16_t* data_ptr = com->packet->data;
     uint16_t* new_ptr = new_data;
     for (unsigned i = 0; i < pairs_128_bits; ++i) {
@@ -67,14 +83,20 @@ void compress(com_t* const com) {
         data_ptr+=8; //move 128 bits
         new_ptr+=7; //move 112 bits (last 16 not needed because compression)
     }
+    if (free_buf)
+        free(com->packet->data);
     com->packet->data = new_data;
-    com->packet->size = pairs_128_bits*14;
+    com->packet->size = newsize;
+
 }
 
-void decompress(com_t* const com) {
-    uint16_t pairs_112_bits = com->packet->size / 14;//224/14=16
-    void* new_data = malloc(pairs_112_bits*16);//16*16=256
-
+//196/14=14
+//14*16=224
+void decompress(com_t* const com, bool free_buf) {
+    uint16_t pairs_112_bits = com->packet->size / 14;
+    uint16_t newsize = pairs_112_bits*16;
+    void* new_data = malloc(newsize);
+    bzero(new_data, newsize);
     uint16_t* data_ptr = com->packet->data;
     uint16_t* new_ptr = new_data;
     for (unsigned i = 0; i < pairs_112_bits; ++i) {
@@ -82,27 +104,59 @@ void decompress(com_t* const com) {
         data_ptr+=7; //move 112 bits (last 16 not needed because compression)
         new_ptr+=8;  //move 128 bits
     }
+    if (free_buf)
+        free(com->packet->data);
     com->packet->data = new_data;
-    com->packet->size = pairs_112_bits*16;
+    com->packet->size = newsize;
+    if (newsize > 256)
+        printf("DECOMPRESS CAUSES >255: %u\n", newsize);
 }
 
-void downsample(com_t* const com, const size_t n) {
-    const uint8_t frame_length = 16*2;
+void downsample(com_t* const com, const size_t n, bool free_buf) {
+    const uint8_t frame_length = 4;
     const uint16_t newsize = (com->packet->size / n) * (n-1);
     void* compressed = malloc(newsize);
-    uint8_t* compressed_ptr = compressed;
-    uint8_t* data_ptr = com->packet->data;
-    size_t count2 = 0;
+    bzero(compressed, newsize);
+    uint32_t* compressed_ptr = compressed;
+    uint32_t* data_ptr = com->packet->data;
 
     size_t frames = com->packet->size / frame_length;
     for (size_t i = 0; i < frames; ++i) {
-        if (i % n == 0)
+        if (i % n == 0) {
+            ++data_ptr;
             continue;
-        memcpy(compressed_ptr, data_ptr, frame_length);
-        compressed_ptr += frame_length;
-        data_ptr += frame_length;
-        count2 += frame_length;
+        }
+        memcpy(compressed_ptr, data_ptr, sizeof(uint32_t));
+        ++compressed_ptr;
+        ++data_ptr;
     }
+    if (free_buf)
+        free(com->packet->data);
     com->packet->size = newsize;
     com->packet->data = compressed;
+}
+
+void resample(com_t* const com, const size_t n, bool free_buf) {
+    const uint8_t frame_length = 4;
+    const uint16_t newsize = (com->packet->size / (n-1)) * n;
+    void* decompressed = malloc(newsize);
+    bzero(decompressed, newsize);
+    uint32_t* decompressed_ptr = decompressed;
+    uint32_t* data_ptr = com->packet->data;
+    // B C D E F G H J K L M N O P
+    // 0 B C D E F G H 0 J K L M N O P
+    size_t frames = newsize / frame_length;
+    for (size_t i = 0; i < frames; ++i) {
+        if (i % n == 0) {
+            decompressed_ptr+=1;
+            continue;
+        }
+        memcpy(decompressed_ptr, data_ptr, sizeof(uint32_t));
+        ++decompressed_ptr;
+        ++data_ptr;
+    }
+    if (free_buf)
+        free(com->packet->data);
+    com->packet->size = newsize;
+    com->packet->data = decompressed;
 }

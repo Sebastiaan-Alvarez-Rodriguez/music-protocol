@@ -2,11 +2,13 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <time.h>
 
 #include "client/client/receive/receive.h"
 #include "client/client/client.h"
 #include "client/musicplayer/player.h"
 #include "communication/constants/constants.h"
+#include "stats/stats.h"
 
 #include "buffer/buffer.h"
 
@@ -31,9 +33,15 @@ void run(const char* address, const unsigned short port, const unsigned buffer_s
         while (buffer_free_size(client.player->buffer) < constants_batch_packets_amount(client.quality->current))
             player_play(client.player);
 
+        clock_t cur = clock();
         receive_batch(&client);
+        client.stat->clock_diff += clock() - cur;
+        client.stat->bytes += constants_batch_size(client.quality->current);
+
+        client_print_stats(&client);
         client_adjust_quality(&client);
     }
+    stat_print(client.stat);
     // Play the last buffered music
     while (!buffer_empty(client.player->buffer))
         player_play(client.player);
@@ -43,7 +51,7 @@ void run(const char* address, const unsigned short port, const unsigned buffer_s
 
 int main(int argc, char **argv) {
     const char* const prog_name = argv[0];
-    size_t buffer_size = constants_batch_size(5);
+    size_t buffer_size = constants_batch_size(5)*2;
     uint8_t initial_quality = 3;
     char* server_address = "127.0.0.1";
     unsigned short bind_port = 1235;
@@ -79,7 +87,6 @@ int main(int argc, char **argv) {
                 }
                 break;
             case 'i':
-                // TODO: gaat dit niet fout? (memory leaks?)
                 server_address = optarg;
                 break;
             case 'p':

@@ -13,6 +13,7 @@
 #include "communication/flags/flags.h"
 #include "communication/quality/quality.h"
 #include "menu/menu.h"
+#include "stats/stats.h"
 #include "client.h"
 
 // Sets up sockets to connect to a server at given address and port.
@@ -32,7 +33,7 @@ static void connect_server(client_t* const client, const char* address, const un
         }
         struct timeval tv;
         tv.tv_sec = 0;
-        tv.tv_usec = 100000; //100.000 us = 100 ms
+        tv.tv_usec = 16000; //16.000 us = 16 ms
         if (setsockopt(socket_fd,SOL_SOCKET,SO_RCVTIMEO,&tv,sizeof(tv)) < 0) {
             perror("Error");
         }
@@ -60,7 +61,8 @@ void client_init(client_t* const client, const char* address, const unsigned sho
     client->player = malloc(sizeof(player_t));
     client->quality = malloc(sizeof(quality_t));
     quality_init(client->quality, initial_quality);
-
+    client->stat = malloc(sizeof(stat_t));
+    stat_init(client->stat);
     client->batch_nr = 0;
     client->EOS_received = false;
     bool retry;
@@ -100,10 +102,21 @@ void client_fill_initial_buffer(client_t* const client) {
 void client_adjust_quality(client_t* const client) {
     if (quality_adjust(client->quality)) {
         do {
-            puts("Sending QTY update!");
+            if (receive_EOS(client, false))
+                return;
+            printf("Sending QTY update! To %u\n", client->quality->current);
             send_QTY(client);
         } while (receive_ACK(client, true) != RECV_OK);
     }
+}
+
+void client_print_stats(const client_t* const client) {
+    if (client->quality->last_measure == 4)
+        printf("OK: %04lu\nFAULTY: %04lu\nLOST: %04lu\nCurrent QTY: %u\n\n", 
+            client->quality->ok,
+            client->quality->faulty,
+            client->quality->lost,
+            client->quality->current);
 }
 
 void client_free(client_t* const client) {
