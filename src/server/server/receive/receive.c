@@ -74,10 +74,8 @@ static void process_intermediate(com_t* const receive, client_info_t* const clie
     if(!client->in_use) {
         task->type = SEND_EOS;
     } else if(flags_is_RR(receive->packet->flags)) {
-        puts("RR");
         task->type = SEND_BATCH;
     } else if(flags_is_REJ(receive->packet->flags)) {
-        puts("REJ");
         task_set_faulty(task, receive->packet->size, receive->packet->data);
     } else if(flags_is_QTY(receive->packet->flags)) {
         task->type = SEND_ACK;
