@@ -11,9 +11,6 @@ enum flags {
     FLAG_QTY = 0x08,
     FLAG_EOS = 0x10
 };
-// Acknowledge
-// Ready to Receive
-// Reject all remaining frames
 
 // Returns a uint8_t containing <amount> specified flags
 // Returns 0 if FLAGS_NONE is in flags

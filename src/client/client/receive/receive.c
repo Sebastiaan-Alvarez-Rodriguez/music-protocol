@@ -23,15 +23,20 @@ static inline bool contains(raw_batch_t* raw, uint8_t item) {
 }
 
 static inline uint8_t* raw_batch_get_missing_nrs(raw_batch_t* raw, uint8_t expected, size_t* len) {
-    uint8_t* not_containing = malloc(sizeof(uint8_t)*(expected - raw->size_nrs));
+    size_t missing = sizeof(uint8_t)*(expected - raw->size_nrs);
+    uint8_t* not_containing = malloc(missing);
+    printf("allocated space for %lu non-containing nrs\n", missing);
     uint8_t* not_containing_ptr = not_containing;
     *len = 0;
-    for (uint8_t i = 0; i < expected; ++i)
+    for (uint8_t i = 0; i < expected; ++i) {
+        if (missing == *len)
+            break;
         if (!contains(raw, i)) {
             *not_containing_ptr = i;
             ++not_containing_ptr;
             ++(*len);
         }
+    }
     return not_containing;
 }
 
@@ -59,11 +64,16 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
             com_free(&com);
             break;
         } else if (flag == RECV_FAULTY) {
+            puts("FAULTY");
             client->quality->faulty += 1;
             com_free(&com);
             continue;
+        } else if (flag == RECV_ERROR) {
+            puts("ERROR");
+            com_free(&com);
+            continue;
         }
-        if (com.packet->flags != 0) {
+        if (com.packet->flags != 0 || com.packet->nr > constants_batch_packets_amount(client->quality->current)) {
             free(com.packet->data);
             com_free(&com);
             continue;

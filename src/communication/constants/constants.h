@@ -1,7 +1,7 @@
 #ifndef CONSTANTS
 #define CONSTANTS
-#include <unistd.h>
 
+#include <unistd.h>
 
 // Returns size of one batch, in bytes.
 // Returnvalue depends on given quality

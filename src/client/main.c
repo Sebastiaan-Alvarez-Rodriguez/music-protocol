@@ -8,6 +8,8 @@
 #include "client/musicplayer/player.h"
 #include "communication/constants/constants.h"
 
+#include "communication/checksums/checksum.h"
+
 #include "buffer/buffer.h"
 
 static void showHelp(const char *prog_name) {
@@ -96,5 +98,18 @@ int main(int argc, char **argv) {
 
     printf("Buffersize is set to approx. %lu KB.\n", buffer_size/1024);
     run(server_address, bind_port, buffer_size, initial_quality);
+    // uint16_t buf[3];
+    // buf[0] = (uint16_t) 255;
+    // buf[1] = (((uint8_t) 22) << 8) | (uint8_t) 0;
+    // buf[2] = (uint16_t) 0x2FA5;
+    // uint16_t alpha = generate_16bit_fletcher(buf, sizeof(buf));
+    // printf("Alpha: %u\n", alpha);
+
+    // uint16_t buf_miss[3];
+    // buf_miss[0] = (uint16_t) 254;
+    // buf_miss[1] = (((uint8_t) 22) << 8) | (uint8_t) 0x0;
+    // buf_miss[2] = (uint16_t) 0x2FA5;
+    // uint16_t beta = generate_16bit_fletcher(buf_miss, sizeof(buf_miss));
+    // printf("Beta: %u\n", beta);
     return 0;
 }

@@ -3,7 +3,6 @@
 
 #include <stdbool.h>
 #include "server/music/music.h"
-#include "asp.h"
 #include "server/client_info/client_info.h"
 #include "communication/com.h"
 

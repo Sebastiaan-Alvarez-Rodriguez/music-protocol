@@ -15,10 +15,10 @@
 #define SIMULATE
 #ifdef SIMULATE
     #include "communication/simulation/simulation.h"
-    #define SIMULATE_BIT_SOME_FLIP_CHANCE 1.5f
-    #define SIMULATE_BIT_FLIP_CHANCE 1.5f
-    #define SIMULATE_DROP_PACKET_CHANCE 15.0f
-    #define SIMULATE_RANDOM_WAIT_CHANCE 2.0f
+    #define SIMULATE_BIT_SOME_FLIP_CHANCE 20.0f
+    #define SIMULATE_BIT_FLIP_CHANCE 20.0f
+    #define SIMULATE_DROP_PACKET_CHANCE 5.0f
+    #define SIMULATE_RANDOM_WAIT_CHANCE 5.0f
     #ifdef SIMULATE_RANDOM_WAIT_CHANCE
         // Times below represent ms, must be integer
         #define SIMULATE_RANDOM_WAIT_MIN 1
@@ -27,7 +27,7 @@
 #endif
 ///////////////////////////////////////////////////
 // Important - Read me
-//Raw buffer convention:
+// Raw buffer convention:
 // 0      15 - 16 31 - 32 39 - 40    47 - 48     63 - sizeof(data)-1
 // checksum1 - size  - flags - packetnr - checksum2 - data
 // Total buffer size is 64 + data length
@@ -40,30 +40,24 @@ static inline uint16_t buf_get_checksum1(const void* const buf) {
 
 // Get size from raw buffer
 static inline uint16_t buf_get_size(const void* const buf) {
-    const uint16_t* pointer = buf;
-    ++pointer;
-    return *pointer;
+    return *(((uint16_t*)buf)+1);
 }
 
 // Get flags from raw buffer
 static inline uint8_t buf_get_flags(const void* const buf) {
-    const uint32_t* pointer = buf;
-    ++pointer;
-    return *(uint8_t*) pointer;
+    return *(((uint8_t*)buf)+4);
 }
 
 // Get flags from raw buffer
 static inline uint8_t buf_get_packetnr(const void* const buf) {
-    const uint8_t* pointer = buf;
-    pointer += 5;
-    return *pointer;
+    return *(((uint8_t*)buf)+5);
 }
 
 // Get checksum2 from raw buffer
 static inline uint16_t buf_get_checksum2(const void* const buf) {
     const uint16_t* pointer = buf;
     pointer += 3;
-    return *pointer;
+    return *(((uint16_t*)buf)+3);
 }
 
 // Get data-pointer from raw buffer
@@ -88,17 +82,17 @@ static inline uint32_t make_checksum2(const void* const buffer, uint16_t buffers
 // Convert a packet_t to be sent with sendcom-function
 // Returns true on success, false otherwise
 // On success, sets pointer to created buffer, and to size of buffur
-static bool convert_send(void** buf, uint16_t* const size, const packet_t* const packet) {
+static void* convert_send(uint16_t* const size, const packet_t* const packet) {
     *size = sizeof(uint16_t)*4 + packet->size;
-    *buf = malloc(*size);
-    if (*buf == NULL || errno == ENOMEM)
-        return false;
+    void* buf = malloc(*size);
+    if (buf == NULL || errno == ENOMEM)
+        return NULL;
 
     // Compute checksums
     uint16_t checksum2 = make_checksum2(packet->data, packet->size);
     uint16_t checksum1 = make_checksum1(packet->size, packet->flags, packet->nr, checksum2);
 
-    uint16_t* pointer = *buf;
+    uint16_t* pointer = buf;
     *pointer = checksum1;            // Write checksum1 field
     ++pointer;                       // Move to size field
     *pointer = packet->size;         // Write size field
@@ -108,7 +102,7 @@ static bool convert_send(void** buf, uint16_t* const size, const packet_t* const
     *pointer = checksum2;            // Write checksum2 field
     ++pointer;                       // Move to data field
     memcpy(pointer, packet->data, packet->size);
-    return true;
+    return buf;
 }
 
 // Convert a buffer, received with recvcom-function, to a packet_t.
@@ -161,9 +155,9 @@ void com_init(com_t* const com, unsigned sockfd, int flags, struct sockaddr* con
 }
 
 bool com_send(const com_t* const com) {
-    void* buf = NULL;
     uint16_t size = 0;
-    if (!convert_send(&buf, &size, com->packet)) {
+    void* buf = convert_send(&size, com->packet);
+    if (!buf) {
         perror("convert_send");
         return false;
     }
@@ -222,6 +216,7 @@ enum recv_flag com_receive(com_t* const com) {
     uint16_t test_checksum1 = make_checksum1(size, flags, packetnr, checksum2);
     if (checksum1 != test_checksum1) {
         recvfrom(com->sockfd, check_buf, 0, MSG_WAITALL, com->address, &com->addr_len);
+        puts("FAULTYCOM checksum1");
         return RECV_FAULTY;
     }
 
@@ -243,22 +238,10 @@ enum recv_flag com_receive(com_t* const com) {
 
     convert_recv(com->packet, full_data, size, flags, packetnr);
     free(full_data);
-
-    // puts("-----RECV-----");
-    // printf("Size: %lu\n", com->packet->size + sizeof(uint16_t)*4);
-    // printf("Size data: %u\n", com->packet->size);
-    // printf("Size other: %lu\n", sizeof(uint16_t)*4);
-    // printf("flags: %#2x\n", com->packet->flags);
-    // printf("packet nr: %u\n", packetnr);
-    // printf("Raw data:"); print_hex(com->packet->size + sizeof(uint16_t)*4, com->packet);
-    // puts("--------------");
-
     return RECV_OK;
 }
 
 bool com_receive_peek(const com_t* const com) {
-    // TODO: Add timeout!
-    // TODO: Check: Gaat alles goed als ik het zo doe?
     return recvfrom(com->sockfd, NULL, 0, MSG_PEEK, NULL, 0) < 0;
 }
 
@@ -268,10 +251,4 @@ void com_consume_packet(const com_t* const com) {
 
 void com_free(const com_t* const com) {
     free(com->packet);
-}
-
-void com_print(const com_t* const com) {
-    struct sockaddr_in* ptr = (struct sockaddr_in*) com->address;
-    printf("Com: {ip : %s}, {port : %u}, {family : %u}\n",
-            inet_ntoa(ptr->sin_addr), ntohs(ptr->sin_port), ptr->sin_family);
 }
