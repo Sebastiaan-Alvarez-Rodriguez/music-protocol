@@ -22,12 +22,11 @@ void simulate_swap_packets(unsigned* const packet_nrs, const size_t batch_len, c
 }
 
 void simulate_flip_bits(void* const data, const uint16_t size, const float probability) {
-    for(unsigned i = 0; i < size; ++i) {
-        unsigned B = (i%48)+16;
+    for(unsigned i = 16; i < size; ++i) {
         float bit_prob = (float)(rand() % (100 + 1));
         if(bit_prob < probability) {
-            unsigned location_bit = B % rand();
-            uint8_t* data_ptr = ((uint8_t*) data) + B;
+            unsigned location_bit = rand() % 8;
+            uint8_t* data_ptr = ((uint8_t*) data) + i;
             *data_ptr ^= (uint8_t)(1UL << location_bit);
         }
     }

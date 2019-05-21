@@ -88,10 +88,10 @@ void client_init(client_t* const client, const char* address, const unsigned sho
     player_init(client->player, buffer_size / constants_packets_size(), constants_packets_size());
 }
 
-void client_fill_initial_buffer(client_t* const client) {
+void client_fill_initial_buffer(client_t* const client, clock_t* const start, size_t* const bytes_received) {
     puts("Filling initial buffer...");
     do {
-        receive_batch(client);
+        receive_batch(client, start, bytes_received);
         printf("%lu%c\n", (buffer_used_size(client->player->buffer)*100) / buffer_capacity(client->player->buffer), '%');
     } while(!client->EOS_received && buffer_free_size(client->player->buffer) >= constants_batch_packets_amount(client->quality->current));
     puts("Done! Playing...");

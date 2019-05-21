@@ -11,6 +11,7 @@ typedef enum {
     NO_MATCH = 2,
 } search_return;
 
+// Searches the client list for the given address
 search_return search_client(server_t* const server, struct sockaddr* address, client_info_t** current);
 
 #endif

@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <strings.h>
+
 #include "buffer/buffer.h"
 #include "client/client/client.h"
 #include "client/client/send/send.h"
@@ -53,7 +54,7 @@ static void raw_batch_free(raw_batch_t* raw) {
     free(raw->recv_nrs);
 }
 
-static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
+static void raw_batch_receive(const client_t* const client, raw_batch_t* raw, clock_t* const start, size_t* const bytes_received) {
     uint8_t initial_size_retrieved = raw->size_nrs;
     for (unsigned i = 0; i < (constants_batch_packets_amount(client->quality->current) - initial_size_retrieved); ++i) {
         com_t com;
@@ -89,6 +90,16 @@ static void raw_batch_receive(const client_t* const client, raw_batch_t* raw) {
         } else if (com.packet->nr*constants_packets_size()+com.packet->size > constants_batch_size(client->quality->current)) {
             printf("WEIRDNESS: Writing out of buf. Location %lu, bytes %u, max %lu\n", com.packet->nr * constants_packets_size(), com.packet->size,constants_batch_size(client->quality->current));
         }
+
+        *bytes_received += com.packet->size;
+        if(((clock() - *start) * 1000) / CLOCKS_PER_SEC >= 1) {
+            puts("------------");
+            printf("Network Speed: %.2f KB/s\n", (double) (*bytes_received / 1000));
+            *start = clock();
+            *bytes_received = 0;
+            puts("------------");
+        }
+
         uint8_t* buf_ptr = ((uint8_t*) raw->data_ptr) + (com.packet->nr*constants_packets_size());
         (raw->recv_nrs)[com.packet->nr] = true;
         raw->size_nrs += 1;
@@ -113,7 +124,7 @@ static inline bool raw_batch_integrity_ok(const client_t* const client, raw_batc
     return true;
 }
 
-void receive_batch(client_t* const client) {
+void receive_batch(client_t* const client, clock_t* const start, size_t* bytes_received) {
     send_RR(client);
     raw_batch_t raw;
     raw_batch_init(&raw, constants_batch_packets_amount(client->quality->current));
@@ -123,7 +134,7 @@ void receive_batch(client_t* const client) {
             raw_batch_free(&raw);
             return;
         }
-        raw_batch_receive(client, &raw);
+        raw_batch_receive(client, &raw, start, bytes_received);
     } while (!raw_batch_integrity_ok(client, &raw));
     client->quality->ok += constants_batch_packets_amount(client->quality->current);
     // Place received data in player buffer

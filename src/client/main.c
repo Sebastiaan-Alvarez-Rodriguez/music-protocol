@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <getopt.h>
+#include <time.h>
 
 #include "client/client/receive/receive.h"
 #include "client/client/client.h"
@@ -27,13 +28,15 @@ static void showHelp(const char *prog_name) {
 void run(const char* address, const unsigned short port, const unsigned buffer_size, const unsigned initial_quality) {
     client_t client;
     client_init(&client, address, port, buffer_size, initial_quality);
-    client_fill_initial_buffer(&client);
+    clock_t start = clock();
+    size_t bytes_received = 0;
+    client_fill_initial_buffer(&client, &start, &bytes_received);
 
     while(!client.EOS_received) {
         while (buffer_free_size(client.player->buffer) < constants_batch_packets_amount(client.quality->current))
             player_play(client.player);
 
-        receive_batch(&client);
+        receive_batch(&client, &start, &bytes_received);
         client_adjust_quality(&client);
     }
     // Play the last buffered music

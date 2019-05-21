@@ -42,10 +42,12 @@ void client_info_init(client_info_t* const client, const com_t* const com, void*
 // else returns false
 bool addr_in_cmp(const struct sockaddr_in* const c1, const struct sockaddr_in* const c2);
 
+// Returns the portion of the music based on the given packet number
 uint8_t* get_music_chunk(client_info_t* const client, const unsigned packet_nr);
 
 // Prints a client_info struct
 void print_client_info(const client_info_t* const client);
 
+// Cleans up the client information
 void client_info_free(client_info_t* const client);
 #endif
