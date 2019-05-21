@@ -41,12 +41,10 @@ enum recv_flag com_receive(com_t* const com);
 // Returns true upon successful receive, false otherwise
 bool com_receive_peek(const com_t* const com);
 
-
+// Consume a full com_t, without looking at contents
 void com_consume_packet(const com_t* const com);
 
 // Free a given com_t structure
 void com_free(const com_t* const com);
-
-void com_print(const com_t* const com);
 
 #endif
