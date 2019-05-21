@@ -34,11 +34,12 @@ static enum check_output_flag receive_and_check(server_t* const server, com_t* r
     }
 
     client_info_t* client = NULL;
-
     switch (search_client(server, receive->address, &client)) {
         case MATCH_UNUSED:
+            puts("Connected client");
             client_info_init(client, receive, server->mf->samples);
             client_info_set_timeout(client, 3000);
+            print_client_info(client);
             break;
         case MATCH:
             client_info_set_timeout(client, 3000);
